@@ -85,7 +85,6 @@ function Dashboard({ session }) {
   useEffect(() => {
     loadTrips();
 
-    // Live updates: if someone else adds/changes a trip, everyone sees it without refreshing
     const channel = supabase
       .channel("trips-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "trips" }, () => loadTrips())
@@ -117,7 +116,17 @@ function Dashboard({ session }) {
   }
 
   async function setStatus(id, status) {
-    await supabase.from("trips").update({ status, manual_override: true }).eq("id", id);
+    await supabase.from("trips").update({
+      status,
+      manual_override: true,
+      status_changed_by: session.user.email,
+      status_changed_at: new Date().toISOString(),
+    }).eq("id", id);
+    loadTrips();
+  }
+
+  async function resumeAuto(id) {
+    await supabase.from("trips").update({ manual_override: false }).eq("id", id);
     loadTrips();
   }
 
@@ -189,7 +198,31 @@ function Dashboard({ session }) {
               <div className="row" key={t.id}>
                 <div>
                   <div className="client">{t.client_name}</div>
-                  <div className="flightinfo">{t.airline} · {t.flight_number} · dep {fmtHour(dep)}</div>
+                  <div className="flightinfo">
+                    {t.airline} · {t.flight_number} · dep {fmtHour(dep)}
+                    {t.origin_code && t.destination_code ? ` · ${t.origin_code} → ${t.destination_code}` : ""}
+                  </div>
+                  {t.phase && (
+                    <div className="phase-line">
+                      {t.phase}
+                      {t.eta ? ` · ETA ${new Date(t.eta).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}` : ""}
+                      {t.gate_destination ? ` · Gate ${t.gate_destination}` : ""}
+                      {t.terminal_destination ? ` · Terminal ${t.terminal_destination}` : ""}
+                    </div>
+                  )}
+                  {t.verification_issue && (
+                    <div className="verify-warning">{t.verification_issue}</div>
+                  )}
+                  {t.origin_code && t.destination_code && (
+                    <div className="route-track">
+                      <span className="route-code">{t.origin_code}</span>
+                      <div className="route-line">
+                        <div className="route-fill" style={{ width: `${t.progress_percent || 0}%` }} />
+                        <span className="route-plane" style={{ left: `${t.progress_percent || 0}%` }}>✈</span>
+                      </div>
+                      <span className="route-code">{t.destination_code}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="track">
                   <div className="bar" style={{ left: `${left}%`, width: `${width}%`, background: meta.color }} />
@@ -205,7 +238,12 @@ function Dashboard({ session }) {
                       <option key={k} value={k}>{v.label}</option>
                     ))}
                   </select>
-                  {t.manual_override && <div className="manual-tag">manually set</div>}
+                  {t.manual_override && (
+                    <div className="manual-tag">
+                      set by {t.status_changed_by}{t.status_changed_at ? ` · ${new Date(t.status_changed_at).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}` : ""}
+                      <br/><button className="ghost" style={{marginTop:3}} onClick={() => resumeAuto(t.id)}>Resume auto-updates</button>
+                    </div>
+                  )}
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <button className="ghost" onClick={() => removeTrip(t.id)}>Remove</button>
