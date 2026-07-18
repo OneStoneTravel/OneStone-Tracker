@@ -9,7 +9,14 @@ const FLIGHTAWARE_API_KEY = Deno.env.get("FLIGHTAWARE_API_KEY")!;
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-// Map FlightAware's status text to our three simple states
+function computePhase(flight: any): string {
+  if (flight.cancelled) return "Cancelled";
+  if (flight.actual_in) return "Landed";
+  if (flight.actual_off) return "In the air";
+  if (flight.actual_out) return "Taxiing";
+  return "Scheduled";
+}
+
 function mapStatus(faStatus: string, cancelled: boolean): string {
   if (cancelled) return "cancelled";
   const s = (faStatus || "").toLowerCase();
@@ -22,7 +29,6 @@ Deno.serve(async () => {
   const today = new Date().toISOString().slice(0, 10);
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 
-  // Only check flights for today and tomorrow — no point checking old ones
   const { data: trips, error } = await supabase
     .from("trips")
     .select("*")
@@ -43,6 +49,7 @@ Deno.serve(async () => {
       );
 
       if (!res.ok) {
+        await supabase.from("trips").update({ verification_issue: `Couldn't verify flight (HTTP ${res.status}) — check the flight number` }).eq("id", trip.id);
         results.push({ flight: trip.flight_number, skipped: true, reason: `HTTP ${res.status}` });
         continue;
       }
@@ -50,13 +57,26 @@ Deno.serve(async () => {
       const json = await res.json();
       const flight = json.flights?.[0];
       if (!flight) {
+        await supabase.from("trips").update({ verification_issue: "Flight not found — check the flight number and date" }).eq("id", trip.id);
         results.push({ flight: trip.flight_number, skipped: true, reason: "not found" });
         continue;
       }
 
       const newStatus = mapStatus(flight.status, flight.cancelled);
+      const detailFields = {
+        phase: computePhase(flight),
+        eta: flight.estimated_in || flight.scheduled_in || null,
+        gate_destination: flight.gate_destination || null,
+        terminal_destination: flight.terminal_destination || null,
+        progress_percent: flight.progress_percent ?? null,
+        origin_code: flight.origin?.code_iata || flight.origin?.code || null,
+        destination_code: flight.destination?.code_iata || flight.destination?.code || null,
+        verification_issue: null,
+      };
 
-      if (newStatus !== trip.status) {
+      await supabase.from("trips").update(detailFields).eq("id", trip.id);
+
+      if (newStatus !== trip.status && !trip.manual_override) {
         await supabase.from("trips").update({ status: newStatus }).eq("id", trip.id);
         results.push({ flight: trip.flight_number, updated: true, newStatus });
       } else {
