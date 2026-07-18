@@ -116,6 +116,11 @@ function Dashboard({ session }) {
     loadTrips();
   }
 
+  async function setStatus(id, status) {
+    await supabase.from("trips").update({ status, manual_override: true }).eq("id", id);
+    loadTrips();
+  }
+
   const counts = { ontime: 0, delayed: 0, cancelled: 0 };
   trips.forEach((t) => counts[t.status]++);
 
@@ -190,7 +195,17 @@ function Dashboard({ session }) {
                   <div className="bar" style={{ left: `${left}%`, width: `${width}%`, background: meta.color }} />
                 </div>
                 <div style={{ textAlign: "center" }}>
-                  <span className="badge" style={{ background: meta.bg, color: meta.color }}>{meta.label}</span>
+                  <select
+                    className="status-select"
+                    value={t.status}
+                    onChange={(e) => setStatus(t.id, e.target.value)}
+                    style={{ background: meta.bg, color: meta.color }}
+                  >
+                    {Object.entries(STATUS_META).map(([k, v]) => (
+                      <option key={k} value={k}>{v.label}</option>
+                    ))}
+                  </select>
+                  {t.manual_override && <div className="manual-tag">manually set</div>}
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <button className="ghost" onClick={() => removeTrip(t.id)}>Remove</button>
