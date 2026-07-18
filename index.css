@@ -1,0 +1,48 @@
+:root{
+  --bg:#EFEDE7; --panel:#FFFFFF; --ink:#22201C; --ink-soft:#6B665C;
+  --line:#DEDAD0; --line-strong:#C7C1B4;
+  --stone-dark:#5A5548;
+}
+*{box-sizing:border-box;}
+body{margin:0; background:var(--bg); color:var(--ink); font-family:Georgia,serif;}
+h1{font-size:24px; margin:0; font-weight:600;}
+.sub{font-family:Helvetica,Arial,sans-serif; font-size:12.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:1.2px;}
+
+.login-wrap{min-height:100vh; display:flex; align-items:center; justify-content:center;}
+.login-card{background:var(--panel); border:1px solid var(--line); padding:32px; width:320px;}
+.login-card label{display:block; font-family:Helvetica,Arial,sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:0.6px; color:var(--ink-soft); margin:14px 0 4px;}
+.login-card input{width:100%; padding:9px; border:1px solid var(--line-strong); font-family:Helvetica,Arial,sans-serif; font-size:14px;}
+.login-card button{margin-top:20px; width:100%; padding:10px; background:var(--ink); color:#fff; border:none; cursor:pointer; text-transform:uppercase; font-family:Helvetica,Arial,sans-serif; font-size:13px;}
+.error{color:#A23B32; font-family:Helvetica,Arial,sans-serif; font-size:12.5px; margin-top:10px;}
+
+.wrap{max-width:920px; margin:0 auto; padding:32px 20px 80px;}
+header{display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid var(--ink); padding-bottom:16px; margin-bottom:28px;}
+.date-input{font-family:Helvetica,Arial,sans-serif; padding:6px 8px; border:1px solid var(--line-strong);}
+
+.stats{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px;}
+.stat{background:var(--panel); border:1px solid var(--line); padding:14px 16px; font-family:Helvetica,Arial,sans-serif;}
+.stat .n{font-size:24px; font-weight:600;}
+.stat .l{font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--ink-soft);}
+
+.panel{background:var(--panel); border:1px solid var(--line); padding:22px; margin-bottom:24px;}
+.panel h2{font-size:15px; font-family:Helvetica,Arial,sans-serif; text-transform:uppercase; letter-spacing:1px; margin:0 0 16px; color:var(--stone-dark); font-weight:600;}
+
+.trip-form{display:grid; grid-template-columns:1.4fr 1fr 1fr 0.8fr 0.9fr auto; gap:10px; align-items:end; font-family:Helvetica,Arial,sans-serif;}
+.trip-form label{display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:0.6px; color:var(--ink-soft); margin-bottom:4px;}
+.trip-form input{width:100%; padding:8px 9px; border:1px solid var(--line-strong); font-size:13px;}
+button{padding:9px 16px; background:var(--ink); color:#fff; border:none; cursor:pointer; font-family:Helvetica,Arial,sans-serif; font-size:12.5px; text-transform:uppercase;}
+button.ghost{background:transparent; color:var(--ink-soft); border:1px solid var(--line-strong); padding:4px 9px; font-size:11px; margin-top:8px;}
+
+.legend{display:flex; gap:18px; font-family:Helvetica,Arial,sans-serif; font-size:11.5px; color:var(--ink-soft); margin-bottom:14px;}
+.legend span{display:inline-flex; align-items:center; gap:6px;}
+.dot{width:9px; height:9px; border-radius:50%; display:inline-block;}
+
+.row{display:grid; grid-template-columns:190px 1fr 100px 80px; align-items:center; gap:14px; padding:12px 0; border-top:1px solid var(--line);}
+.row:first-of-type{border-top:none;}
+.client{font-size:14px; font-weight:600;}
+.flightinfo{font-family:Helvetica,Arial,sans-serif; font-size:11.5px; color:var(--ink-soft); margin-top:1px;}
+.track{position:relative; height:20px; background:#F1EEE7; border:1px solid var(--line);}
+.bar{position:absolute; top:0; height:100%; opacity:0.92;}
+.badge{font-family:Helvetica,Arial,sans-serif; font-size:11px; font-weight:600; padding:3px 8px;}
+.axis{display:flex; justify-content:space-between; font-family:Helvetica,Arial,sans-serif; font-size:10.5px; color:var(--ink-soft); margin-top:10px; padding-top:8px; border-top:1px solid var(--line);}
+.empty{font-family:Helvetica,Arial,sans-serif; color:var(--ink-soft); font-size:13px; padding:20px 0; text-align:center;}
