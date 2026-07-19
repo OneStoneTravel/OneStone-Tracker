@@ -17,11 +17,20 @@ function computePhase(flight: any): string {
   return "Scheduled";
 }
 
-function mapStatus(faStatus: string, cancelled: boolean): string {
-  if (cancelled) return "cancelled";
-  const s = (faStatus || "").toLowerCase();
-  if (s.includes("cancel")) return "cancelled";
-  if (s.includes("delay")) return "delayed";
+function computeStatus(flight: any): string {
+  if (flight.cancelled) return "cancelled";
+
+  const DELAY_THRESHOLD_MIN = 15;
+
+  function minutesLate(scheduled: string | null, actualOrEstimated: string | null): number {
+    if (!scheduled || !actualOrEstimated) return 0;
+    return (new Date(actualOrEstimated).getTime() - new Date(scheduled).getTime()) / 60000;
+  }
+
+  const depDelay = minutesLate(flight.scheduled_out, flight.actual_out || flight.estimated_out);
+  const arrDelay = minutesLate(flight.scheduled_in, flight.actual_in || flight.estimated_in);
+
+  if (depDelay > DELAY_THRESHOLD_MIN || arrDelay > DELAY_THRESHOLD_MIN) return "delayed";
   return "ontime";
 }
 
