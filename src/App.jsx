@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 
-const DAY_START = 5;
-const DAY_END = 23;
+const DAY_START = 0;
+const DAY_END = 24;
 
 const STATUS_META = {
   ontime: { label: "On time", color: "#2F6E4E", bg: "#E3EFE7" },
@@ -191,8 +191,8 @@ function Dashboard({ session }) {
         ) : (
           trips.map((t) => {
             const dep = timeToDecimal(t.departure_time);
-            const left = ((dep - DAY_START) / (DAY_END - DAY_START)) * 100;
-            const width = Math.max((t.duration_hours / (DAY_END - DAY_START)) * 100, 2.5);
+            const left = Math.min(Math.max(((dep - DAY_START) / (DAY_END - DAY_START)) * 100, 0), 100);
+            const width = Math.min(Math.max((t.duration_hours / (DAY_END - DAY_START)) * 100, 2.5), 100 - left);
             const meta = STATUS_META[t.status];
             return (
               <div className="row" key={t.id}>
