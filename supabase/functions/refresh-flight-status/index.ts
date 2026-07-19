@@ -71,7 +71,7 @@ Deno.serve(async () => {
         continue;
       }
 
-      const newStatus = mapStatus(flight.status, flight.cancelled);
+      const newStatus = computeStatus(flight);
       const detailFields = {
         phase: computePhase(flight),
         eta: flight.estimated_in || flight.scheduled_in || null,
