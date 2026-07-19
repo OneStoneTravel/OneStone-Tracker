@@ -110,7 +110,12 @@ Deno.serve(async () => {
     }
   }
 
-  return new Response(JSON.stringify({ checked: results.length, results }), {
+  return new Response(JSON.stringify({
+    checked: results.length,
+    results,
+    debug_today: today,
+    debug_tomorrow: tomorrow,
+  }), {
     headers: { "Content-Type": "application/json" },
   });
 });
