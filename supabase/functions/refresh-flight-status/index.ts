@@ -1,5 +1,5 @@
 // This runs on Supabase's servers, not in the browser — so your FlightAware
-// API key stays private. It's scheduled to run automatically (set up in Step 6).
+// API key stays private. It's scheduled to run automatically.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -17,6 +17,20 @@ function computePhase(flight: any): string {
   return "Scheduled";
 }
 
+// Arizona doesn't observe daylight saving time, so this offset is stable year-round.
+function localDateString(offsetDays = 0): string {
+  const d = new Date(Date.now() + offsetDays * 86400000);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Phoenix",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}
+
+// Determine status by comparing scheduled times to actual/estimated times,
+// rather than relying on FlightAware's status text (which often just says
+// "En Route" even for a flight running hours late).
 function computeStatus(flight: any): string {
   if (flight.cancelled) return "cancelled";
 
@@ -35,8 +49,8 @@ function computeStatus(flight: any): string {
 }
 
 Deno.serve(async () => {
-  const today = new Date().toISOString().slice(0, 10);
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const today = localDateString(0);
+  const tomorrow = localDateString(1);
 
   const { data: trips, error } = await supabase
     .from("trips")
