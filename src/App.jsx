@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import DisruptionTool from "./DisruptionTool";
+import TripNotes from "./TripNotes";
 
 const DAY_START = 0;
 const DAY_END = 24;
@@ -321,7 +322,8 @@ function Tracker({ session }) {
             const width = Math.min(Math.max((t.duration_hours / (DAY_END - DAY_START)) * 100, 2.5), 100 - left);
             const meta = STATUS_META[t.status];
             return (
-              <div className="row" key={t.id}>
+              <div className="trip-block" key={t.id}>
+              <div className="row">
                 <div>
                   <div className="client">{t.client_name}{t.company_name ? ` · ${t.company_name}` : ""}</div>
                   <div className="flightinfo">
@@ -368,6 +370,8 @@ function Tracker({ session }) {
                 <div style={{ textAlign: "right" }}>
                   <button className="ghost" onClick={() => removeTrip(t.id)}>Remove</button>
                 </div>
+              </div>
+              <TripNotes tripId={t.id} session={session} />
               </div>
             );
           })
