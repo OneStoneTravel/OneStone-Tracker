@@ -1,57 +1,179 @@
 :root{
-  --bg:#EFEDE7; --panel:#FFFFFF; --ink:#22201C; --ink-soft:#6B665C;
-  --line:#DEDAD0; --line-strong:#C7C1B4;
-  --stone-dark:#5A5548;
+  --navy:#16233F; --navy-deep:#0F1A30;
+  --wine:#7A2E3A; --wine-dark:#5F2430; --wine-light:#C4788A; --wine-pale:#FFF6F7;
+  --bg:#F4F6F8; --card:#fff; --ink:#23262B; --ink-soft:#5B6270; --line:#E2E6EB;
+  --green:#2F6B4F; --green-bg:#E9F3EC; --amber:#9A6B15; --amber-bg:#FCF4E3;
+  --red:#B0432F; --red-bg:#FBECE9;
 }
-*{box-sizing:border-box;}
-body{margin:0; background:var(--bg); color:var(--ink); font-family:Georgia,serif;}
-h1{font-size:24px; margin:0; font-weight:600;}
-.sub{font-family:Helvetica,Arial,sans-serif; font-size:12.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:1.2px;}
+*{box-sizing:border-box}
+body{margin:0;padding:0;background:var(--bg);font-family:'Inter',-apple-system,sans-serif;color:var(--ink)}
+h1,h2,h3{font-family:'Fraunces',Georgia,serif;}
 
-.login-wrap{min-height:100vh; display:flex; align-items:center; justify-content:center;}
-.login-card{background:var(--panel); border:1px solid var(--line); padding:32px; width:320px;}
-.login-card label{display:block; font-family:Helvetica,Arial,sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:0.6px; color:var(--ink-soft); margin:14px 0 4px;}
-.login-card input{width:100%; padding:9px; border:1px solid var(--line-strong); font-family:Helvetica,Arial,sans-serif; font-size:14px;}
-.login-card button{margin-top:20px; width:100%; padding:10px; background:var(--ink); color:#fff; border:none; cursor:pointer; text-transform:uppercase; font-family:Helvetica,Arial,sans-serif; font-size:13px;}
-.error{color:#A23B32; font-family:Helvetica,Arial,sans-serif; font-size:12.5px; margin-top:10px;}
+/* ---------- TOP BAR ---------- */
+.knoxbar{background:linear-gradient(135deg,var(--navy),var(--navy-deep));color:#fff;
+  position:sticky;top:0;z-index:50;box-shadow:0 2px 12px rgba(15,26,48,.14)}
+.knoxbar-inner{max-width:1200px;margin:0 auto;padding:16px 20px 0;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.knox-logo{font-family:'Fraunces',Georgia,serif;font-size:27px;font-weight:600;color:#fff;letter-spacing:.06em}
+.knox-logo span{color:var(--wine-light)}
+.knox-sub{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#9FB0C9;margin-top:-2px}
+.knox-user{font-size:13px;color:#C7D0DE;display:flex;align-items:center;gap:12px}
+.knox-user .who{font-weight:600;color:#fff}
+.knox-user button{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;
+  font-family:'Inter',sans-serif;font-size:12px;padding:6px 12px;border-radius:6px;cursor:pointer}
+.knox-user button:hover{background:rgba(255,255,255,.18)}
 
-.wrap{max-width:920px; margin:0 auto; padding:32px 20px 80px;}
-header{display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid var(--ink); padding-bottom:16px; margin-bottom:28px;}
-.date-input{font-family:Helvetica,Arial,sans-serif; padding:6px 8px; border:1px solid var(--line-strong);}
+/* ---------- TABS ---------- */
+.knox-tabs{max-width:1200px;margin:0 auto;padding:0 20px;display:flex;gap:4px}
+.knox-tab{padding:13px 22px;font-size:14.5px;font-weight:600;color:#9FB0C9;cursor:pointer;
+  border:none;background:none;font-family:'Inter',sans-serif;border-bottom:3px solid transparent;
+  transition:all .15s ease}
+.knox-tab:hover{color:#fff}
+.knox-tab.active{color:#fff;border-bottom-color:var(--wine-light)}
 
-.stats{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px;}
-.stat{background:var(--panel); border:1px solid var(--line); padding:14px 16px; font-family:Helvetica,Arial,sans-serif;}
-.stat .n{font-size:24px; font-weight:600;}
-.stat .l{font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--ink-soft);}
+.wrap{max-width:1200px;margin:0 auto;padding:26px 20px 60px}
 
-.panel{background:var(--panel); border:1px solid var(--line); padding:22px; margin-bottom:24px;}
-.panel h2{font-size:15px; font-family:Helvetica,Arial,sans-serif; text-transform:uppercase; letter-spacing:1px; margin:0 0 16px; color:var(--stone-dark); font-weight:600;}
+/* ---------- LOGIN ---------- */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+.login-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:32px;width:340px;
+  box-shadow:0 1px 2px rgba(15,26,48,.06)}
+.login-logo{text-align:center;color:var(--navy);margin-bottom:2px}
+.login-card .sub{text-align:center;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:18px}
+.login-card label{display:block;font-family:'Inter',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-soft);margin:14px 0 4px}
+.login-card input{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;font-family:'Inter',sans-serif;font-size:14px}
+.login-card input:focus{outline:none;border-color:var(--wine)}
+.login-card button{margin-top:20px;width:100%;padding:11px;background:var(--wine);color:#fff;border:none;
+  border-radius:8px;cursor:pointer;text-transform:uppercase;letter-spacing:.04em;font-family:'Inter',sans-serif;font-size:13px;font-weight:600}
+.login-card button:hover{background:var(--wine-dark)}
+.error{color:var(--red);font-family:'Inter',sans-serif;font-size:12.5px;margin-top:10px}
 
-.trip-form{display:grid; grid-template-columns:1.4fr 1fr 1fr 0.8fr 0.9fr auto; gap:10px; align-items:end; font-family:Helvetica,Arial,sans-serif;}
-.trip-form label{display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:0.6px; color:var(--ink-soft); margin-bottom:4px;}
-.trip-form input{width:100%; padding:8px 9px; border:1px solid var(--line-strong); font-size:13px;}
-button{padding:9px 16px; background:var(--ink); color:#fff; border:none; cursor:pointer; font-family:Helvetica,Arial,sans-serif; font-size:12.5px; text-transform:uppercase;}
-button.ghost{background:transparent; color:var(--ink-soft); border:1px solid var(--line-strong); padding:4px 9px; font-size:11px; margin-top:8px;}
+/* ---------- WELCOME ---------- */
+.welcome{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 24px;
+  margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;
+  box-shadow:0 1px 2px rgba(15,26,48,.04)}
+.welcome h1{font-size:22px;color:var(--navy);margin:0 0 4px;font-weight:500}
+.welcome p{margin:0;font-size:13.5px;color:var(--ink-soft)}
+.welcome .today{text-align:right}
+.welcome .today .d{font-family:'Fraunces',Georgia,serif;font-size:20px;color:var(--wine);font-weight:600}
+.welcome .today .l{font-size:11px;color:var(--ink-soft);letter-spacing:.06em;text-transform:uppercase}
 
-.legend{display:flex; gap:18px; font-family:Helvetica,Arial,sans-serif; font-size:11.5px; color:var(--ink-soft); margin-bottom:14px;}
-.legend span{display:inline-flex; align-items:center; gap:6px;}
-.dot{width:9px; height:9px; border-radius:50%; display:inline-block;}
+/* ---------- STATS ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.stat .n{font-size:24px;font-weight:600;font-family:'Inter',sans-serif}
+.stat .l{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--ink-soft)}
 
-.row{display:grid; grid-template-columns:190px 1fr 100px 80px; align-items:center; gap:14px; padding:12px 0; border-top:1px solid var(--line);}
-.row:first-of-type{border-top:none;}
-.client{font-size:14px; font-weight:600;}
-.flightinfo{font-family:Helvetica,Arial,sans-serif; font-size:11.5px; color:var(--ink-soft); margin-top:1px;}
-.phase-line{font-family:Helvetica,Arial,sans-serif; font-size:11px; color:var(--stone-dark); margin-top:2px; font-weight:600;}
-.route-track{display:flex; align-items:center; gap:6px; margin-top:5px;}
-.route-code{font-family:Helvetica,Arial,sans-serif; font-size:10px; color:var(--ink-soft); font-weight:600;}
-.route-line{position:relative; flex:1; height:2px; background:var(--line-strong);}
-.route-fill{position:absolute; top:0; left:0; height:100%; background:var(--stone-dark);}
-.route-plane{position:absolute; top:50%; transform:translate(-50%,-50%); font-size:11px;}
-.verify-warning{font-family:Helvetica,Arial,sans-serif; font-size:10.5px; color:#A23B32; margin-top:4px; font-style:italic;}
-.track{position:relative; height:20px; background:#F1EEE7; border:1px solid var(--line); overflow:hidden;}
-.bar{position:absolute; top:0; height:100%; opacity:0.92;}
-.badge{font-family:Helvetica,Arial,sans-serif; font-size:11px; font-weight:600; padding:3px 8px;}
-.status-select{font-family:Helvetica,Arial,sans-serif; font-size:11px; font-weight:600; padding:4px 6px; border:1px solid var(--line-strong); border-radius:3px; cursor:pointer;}
-.manual-tag{font-family:Helvetica,Arial,sans-serif; font-size:9.5px; color:var(--ink-soft); margin-top:3px; font-style:italic;}
-.axis{display:flex; justify-content:space-between; font-family:Helvetica,Arial,sans-serif; font-size:10.5px; color:var(--ink-soft); margin-top:10px; padding-top:8px; border-top:1px solid var(--line);}
-.empty{font-family:Helvetica,Arial,sans-serif; color:var(--ink-soft); font-size:13px; padding:20px 0; text-align:center;}
+/* ---------- PANELS / FORMS ---------- */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px;margin-bottom:22px;
+  box-shadow:0 1px 2px rgba(15,26,48,.04)}
+.panel h2{font-size:16px;text-transform:uppercase;letter-spacing:1px;margin:0 0 16px;color:var(--navy);font-weight:600}
+.trip-form{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:end;font-family:'Inter',sans-serif}
+.trip-form label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-soft);margin-bottom:4px}
+.trip-form input,.trip-form select{width:100%;padding:8px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px}
+.trip-form input:focus,.trip-form select:focus{outline:none;border-color:var(--wine)}
+button{padding:9px 16px;background:var(--wine);color:#fff;border:none;border-radius:6px;cursor:pointer;
+  font-family:'Inter',sans-serif;font-size:12.5px;text-transform:uppercase;font-weight:600}
+button:hover{background:var(--wine-dark)}
+button.ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);padding:4px 9px;font-size:11px;margin-top:8px;text-transform:none;font-weight:500}
+button.ghost:hover{color:var(--wine);border-color:var(--wine);background:none}
+
+/* ---------- SECTION HEADS ---------- */
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin:26px 0 12px;flex-wrap:wrap;gap:8px}
+.sec-head h2{font-size:19px;color:var(--navy);margin:0;font-weight:600;text-transform:none;letter-spacing:0}
+.sec-head .count{font-size:12.5px;color:var(--ink-soft)}
+.date-input{font-family:'Inter',sans-serif;padding:6px 8px;border:1px solid var(--line);border-radius:6px}
+
+/* ---------- LEGEND ---------- */
+.legend{display:flex;gap:18px;font-family:'Inter',sans-serif;font-size:11.5px;color:var(--ink-soft);margin-bottom:14px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+
+/* ---------- BOARD ROWS (existing tracker) ---------- */
+.row{display:grid;grid-template-columns:220px 1fr 120px 80px;align-items:center;gap:14px;padding:12px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:none}
+.client{font-size:14px;font-weight:600;color:var(--ink)}
+.flightinfo{font-family:'Inter',sans-serif;font-size:11.5px;color:var(--ink-soft);margin-top:1px}
+.phase-line{font-family:'Inter',sans-serif;font-size:11px;color:var(--navy);margin-top:2px;font-weight:600}
+.date-edit{font-family:'Inter',sans-serif;font-size:10.5px;color:var(--ink-soft);margin-top:3px}
+.date-edit input{font-size:10.5px;border:1px solid var(--line);border-radius:4px;padding:1px 3px;margin-left:3px}
+.route-track{display:flex;align-items:center;gap:6px;margin-top:5px}
+.route-code{font-family:'Inter',sans-serif;font-size:10px;color:var(--ink-soft);font-weight:600}
+.route-line{position:relative;flex:1;height:2px;background:var(--line)}
+.route-fill{position:absolute;top:0;left:0;height:100%;background:var(--wine)}
+.route-plane{position:absolute;top:50%;transform:translate(-50%,-50%);font-size:11px}
+.verify-warning{font-family:'Inter',sans-serif;font-size:10.5px;color:var(--red);margin-top:4px;font-style:italic}
+.track{position:relative;height:20px;background:#F1F3F6;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.bar{position:absolute;top:0;height:100%;opacity:.92}
+.status-select{font-family:'Inter',sans-serif;font-size:11px;font-weight:600;padding:4px 6px;border:1px solid var(--line);border-radius:6px;cursor:pointer}
+.manual-tag{font-family:'Inter',sans-serif;font-size:9.5px;color:var(--ink-soft);margin-top:3px;font-style:italic}
+.axis{display:flex;justify-content:space-between;font-family:'Inter',sans-serif;font-size:10.5px;color:var(--ink-soft);margin-top:10px;padding-top:8px;border-top:1px solid var(--line)}
+.empty{font-family:'Inter',sans-serif;color:var(--ink-soft);font-size:13px;padding:20px 0;text-align:center}
+
+/* ---------- KNOX TABLES (Future Trips) ---------- */
+.tbl-wrap{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(15,26,48,.04)}
+table.k{width:100%;border-collapse:collapse;font-size:13px}
+table.k th{background:var(--navy);color:#fff;text-align:left;padding:11px 13px;font-size:11.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap}
+table.k td{padding:11px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+table.k tr:last-child td{border-bottom:none}
+table.k tbody tr:hover{background:#FAFBFC}
+.cnum{font-weight:700;color:var(--wine);white-space:nowrap}
+.muted{color:var(--ink-soft);font-size:12px}
+.plan-tag{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;background:var(--wine-pale);color:var(--wine);border:1px solid #E3C2C8;white-space:nowrap}
+
+.status{display:inline-block;padding:4px 11px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.status.pending{background:var(--amber-bg);color:var(--amber)}
+.status.working{background:#E7EEF6;color:#2C4B78}
+.status.booked{background:var(--green-bg);color:var(--green)}
+
+/* ---------- DISRUPTION TOOL ---------- */
+.searchbar{margin-bottom:14px}
+.searchbar input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;font-family:'Inter',sans-serif;font-size:14.5px;background:#fff}
+.searchbar input:focus{outline:none;border-color:var(--wine);box-shadow:0 0 0 3px rgba(122,46,58,.14)}
+.dtabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+.dtab{padding:9px 15px;border:1.5px solid var(--line);border-radius:999px;background:#fff;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--ink-soft);transition:.15s;user-select:none}
+.dtab:hover{border-color:var(--wine-light)}
+.dtab.active{background:var(--navy);border-color:var(--navy);color:#fff}
+.scenario{background:var(--card);border:1px solid var(--line);border-radius:11px;margin-bottom:10px;overflow:hidden;box-shadow:0 1px 2px rgba(15,26,48,.04)}
+.sc-head{padding:14px 18px;cursor:pointer;display:flex;align-items:center;gap:12px;user-select:none}
+.sc-head:hover{background:#FAFBFC}
+.sc-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.sc-dot.ok{background:var(--green)} .sc-dot.warn{background:var(--amber)} .sc-dot.bad{background:var(--red)}
+.sc-title{font-weight:600;font-size:15px;color:var(--navy);flex:1}
+.sc-sub{font-size:12.5px;color:var(--ink-soft);margin-top:2px;font-weight:400}
+.chev{color:#9CA3AF;font-size:13px;transition:.2s}
+.scenario.open .chev{transform:rotate(90deg)}
+.sc-body{padding:0 18px 18px;border-top:1px solid var(--line)}
+.actions{margin-top:14px}
+.act{border-radius:9px;padding:11px 14px;margin-bottom:9px;border-left:4px solid}
+.act.green{background:var(--green-bg);border-color:var(--green)}
+.act.amber{background:var(--amber-bg);border-color:var(--amber)}
+.act.red{background:var(--red-bg);border-color:var(--red)}
+.act .lvl{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;margin-bottom:4px}
+.act.green .lvl{color:var(--green)} .act.amber .lvl{color:var(--amber)} .act.red .lvl{color:var(--red)}
+.act .at{font-weight:700;font-size:13.5px;color:var(--ink);margin-bottom:3px}
+.act .ad{font-size:12.5px;color:#3A3F47;line-height:1.5}
+.say{background:#fff;border:1px solid var(--line);border-left:4px solid var(--navy);border-radius:8px;padding:11px 14px;margin-top:12px}
+.say .lbl{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--wine);margin-bottom:5px}
+.say .txt{font-size:13px;font-style:italic;color:var(--ink);line-height:1.55}
+.flag{background:#FDF6E9;border:1px solid #E0C48A;border-radius:8px;padding:10px 13px;margin-top:11px;font-size:12.5px;color:#3A3F47}
+.flag b{color:var(--navy)}
+.drive-pick{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.drive-pick select{padding:11px 13px;border:1px solid var(--line);border-radius:9px;font-family:'Inter',sans-serif;font-size:14.5px;background:#fff;min-width:250px}
+.drive-pick select:focus{outline:none;border-color:var(--wine)}
+.verdict{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700}
+.verdict.go{background:var(--green-bg);color:var(--green)}
+.verdict.maybe{background:var(--amber-bg);color:var(--amber)}
+.verdict.no{background:var(--red-bg);color:var(--red)}
+.rule-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:15px 18px;margin-bottom:14px}
+.rule-card h3{font-size:15px;color:var(--navy);margin:0 0 7px}
+.rule-card p{margin:0 0 7px;font-size:13px;color:#3A3F47;line-height:1.55}
+.rule-card ul{margin:0;padding-left:18px;font-size:13px;color:#3A3F47;line-height:1.6}
+.foot{text-align:center;font-size:11.5px;color:var(--ink-soft);margin-top:26px;line-height:1.6}
+
+@media(max-width:760px){
+  .knox-tab{padding:12px 14px;font-size:13px}
+  table.k{font-size:12px}
+  table.k th,table.k td{padding:9px 10px}
+  .trip-form{grid-template-columns:1fr 1fr}
+  .row{grid-template-columns:1fr;text-align:left}
+}
