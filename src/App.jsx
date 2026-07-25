@@ -18,6 +18,25 @@ const BOOKING_META = {
   booked: { label: "Booked & Confirmed", className: "booked" },
 };
 
+const AIRLINES = [
+  "American", "United", "Delta", "Southwest", "JetBlue",
+  "Alaska", "Spirit", "Frontier", "Allegiant", "Hawaiian", "Other",
+];
+
+function tenureLabel(dateJoined) {
+  if (!dateJoined) return "";
+  const start = new Date(dateJoined + "T00:00:00");
+  const now = new Date();
+  let months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+  if (months < 1) return "Client since this month";
+  const years = Math.floor(months / 12);
+  const remMonths = months % 12;
+  const parts = [];
+  if (years > 0) parts.push(`${years}yr`);
+  if (remMonths > 0 || years === 0) parts.push(`${remMonths}mo`);
+  return `Client for ${parts.join(" ")}`;
+}
+
 function fmtHour(h) {
   const hr = Math.floor(h) % 12 === 0 ? 12 : Math.floor(h) % 12;
   const m = Math.round((h % 1) * 60);
@@ -84,23 +103,25 @@ function Login() {
 
 function emptyForm() {
   return {
-    company_name: "",
-    client_number: "",
-    plan_tier: "",
-    client_name: "",
+    client_id: "",
+    traveler_choice: "",
+    new_traveler_name: "",
     from_code: "",
     to_code: "",
-    airline: "",
+    airline_choice: "",
+    airline_other: "",
     flight_number: "",
     departure_time: "09:00",
     duration_hours: 2.5,
-    contact_phone: "",
     booking_status: "pending",
   };
 }
 
-function TripForm({ date, onAdd }) {
+function TripForm({ date, onAdd, clients, travelers }) {
   const [form, setForm] = useState(emptyForm());
+
+  const selectedClient = clients.find((c) => c.id === form.client_id);
+  const clientTravelers = travelers.filter((t) => t.client_id === form.client_id);
 
   async function submit(e) {
     e.preventDefault();
@@ -114,17 +135,54 @@ function TripForm({ date, onAdd }) {
     <div className="panel">
       <h2>Add a client trip</h2>
       <form className="trip-form" onSubmit={submit}>
-        <div><label>Company</label><input value={form.company_name} onChange={set("company_name")} placeholder="Valley Health Staffing" /></div>
-        <div><label>Client #</label><input value={form.client_number} onChange={set("client_number")} placeholder="OS-1001-C" /></div>
-        <div><label>Plan</label><input value={form.plan_tier} onChange={set("plan_tier")} placeholder="Anchor" /></div>
-        <div><label>Traveler</label><input required value={form.client_name} onChange={set("client_name")} placeholder="Dana Reyes" /></div>
+        <div>
+          <label>Company</label>
+          <select required value={form.client_id} onChange={(e) => setForm({ ...form, client_id: e.target.value, traveler_choice: "" })}>
+            <option value="">Select a company…</option>
+            {clients.map((c) => <option key={c.id} value={c.id}>{c.company_name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label>Client #</label>
+          <input disabled value={selectedClient?.client_number || ""} placeholder="—" />
+        </div>
+        <div>
+          <label>Plan</label>
+          <input disabled value={selectedClient?.plan_tier || ""} placeholder="—" />
+        </div>
+        <div>
+          <label>Client tenure</label>
+          <input disabled value={selectedClient ? tenureLabel(selectedClient.date_joined) : ""} placeholder="—" />
+        </div>
+        <div>
+          <label>Traveler</label>
+          <select required value={form.traveler_choice} onChange={set("traveler_choice")} disabled={!form.client_id}>
+            <option value="">{form.client_id ? "Select a traveler…" : "Pick a company first"}</option>
+            {clientTravelers.map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}
+            <option value="__new__">+ Add new traveler…</option>
+          </select>
+        </div>
+        {form.traveler_choice === "__new__" && (
+          <div>
+            <label>New traveler name</label>
+            <input required value={form.new_traveler_name} onChange={set("new_traveler_name")} placeholder="Full name" />
+          </div>
+        )}
         <div><label>From</label><input value={form.from_code} onChange={set("from_code")} placeholder="PHX" /></div>
         <div><label>To</label><input value={form.to_code} onChange={set("to_code")} placeholder="DFW" /></div>
-        <div><label>Airline</label><input required value={form.airline} onChange={set("airline")} placeholder="American" /></div>
+        <div>
+          <label>Airline</label>
+          <select required value={form.airline_choice} onChange={set("airline_choice")}>
+            <option value="">Select…</option>
+            {AIRLINES.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </div>
+        {form.airline_choice === "Other" && (
+          <div><label>Airline name</label><input required value={form.airline_other} onChange={set("airline_other")} placeholder="Airline name" /></div>
+        )}
         <div><label>Flight #</label><input required value={form.flight_number} onChange={set("flight_number")} placeholder="AA887" /></div>
         <div><label>Departs</label><input required type="time" value={form.departure_time} onChange={set("departure_time")} /></div>
         <div><label>Duration (hrs)</label><input required type="number" step="0.1" min="0.2" value={form.duration_hours} onChange={set("duration_hours")} /></div>
-        <div><label>Contact phone</label><input value={form.contact_phone} onChange={set("contact_phone")} placeholder="(602) 555-0142" /></div>
         <div>
           <label>Booking status</label>
           <select value={form.booking_status} onChange={set("booking_status")}>
@@ -191,7 +249,19 @@ function Tracker({ session }) {
   const [date, setDate] = useState(localDateStr());
   const [trips, setTrips] = useState([]);
   const [allTrips, setAllTrips] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [travelers, setTravelers] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  async function loadClients() {
+    const { data, error } = await supabase.from("clients").select("*").order("company_name");
+    if (!error) setClients(data);
+  }
+
+  async function loadTravelers() {
+    const { data, error } = await supabase.from("travelers").select("*");
+    if (!error) setTravelers(data);
+  }
 
   async function loadTrips() {
     setLoading(true);
@@ -212,6 +282,8 @@ function Tracker({ session }) {
   useEffect(() => {
     loadTrips();
     loadAllTrips();
+    loadClients();
+    loadTravelers();
 
     const channel = supabase
       .channel("trips-changes")
@@ -226,21 +298,35 @@ function Tracker({ session }) {
   }, [date]);
 
   async function addTrip(form, tripDate) {
+    const client = clients.find((c) => c.id === form.client_id);
+    let travelerName = form.traveler_choice;
+
+    if (travelerName === "__new__") {
+      travelerName = form.new_traveler_name.trim();
+      if (travelerName) {
+        await supabase.from("travelers").insert({ client_id: form.client_id, name: travelerName });
+        loadTravelers();
+      }
+    }
+
+    const airline = form.airline_choice === "Other" ? form.airline_other : form.airline_choice;
+
     await supabase.from("trips").insert({
-      company_name: form.company_name || null,
-      client_number: form.client_number || null,
-      plan_tier: form.plan_tier || null,
-      client_name: form.client_name,
+      client_id: form.client_id || null,
+      company_name: client?.company_name || null,
+      client_number: client?.client_number || null,
+      plan_tier: client?.plan_tier || null,
+      contact_phone: client?.contact_phone || null,
+      client_name: travelerName,
       from_code: form.from_code || null,
       to_code: form.to_code || null,
-      airline: form.airline,
+      airline,
       flight_number: form.flight_number,
       travel_date: tripDate,
       departure_time: form.departure_time,
       duration_hours: parseFloat(form.duration_hours) || 2,
       status: "ontime",
       booking_status: form.booking_status,
-      contact_phone: form.contact_phone || null,
       entered_by: session.user.email,
     });
     loadTrips();
@@ -298,7 +384,7 @@ function Tracker({ session }) {
         <div className="stat"><div className="n" style={{ color: STATUS_META.cancelled.color }}>{counts.cancelled}</div><div className="l">Cancelled</div></div>
       </div>
 
-      <TripForm date={date} onAdd={addTrip} />
+      <TripForm date={date} onAdd={addTrip} clients={clients} travelers={travelers} />
 
       <div className="panel">
         <div className="sec-head" style={{ margin: 0 }}>
