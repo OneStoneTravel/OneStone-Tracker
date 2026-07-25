@@ -254,7 +254,7 @@ function Tracker({ session }) {
   const [loading, setLoading] = useState(true);
 
   async function loadClients() {
-    const { data, error } = await supabase.from("clients").select("*").order("company_name");
+    const { data, error } = await supabase.from("clients").select("*").eq("status", "active").order("company_name");
     if (!error) setClients(data);
   }
 
