@@ -82,20 +82,17 @@ function localDateStr(d) {
   );
 }
 
-function formatSearchDate(dateStr) {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+function googleFlightSearch(query) {
+  if (!query) return;
+  window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, "_blank");
 }
 
-function googleFlightSearch({ flightNumber, airline, fromCode, toCode, dateStr }) {
-  if (!flightNumber) return;
-  const parts = [];
-  if (airline) parts.push(airline);
-  parts.push(flightNumber);
-  parts.push("flight status");
-  if (fromCode && toCode) parts.push(`${fromCode} to ${toCode}`);
-  if (dateStr) parts.push(formatSearchDate(dateStr));
-  window.open(`https://www.google.com/search?q=${encodeURIComponent(parts.join(" "))}`, "_blank");
+// Existing trips store flight_number as one combined string like "AA887" —
+// split it back into "AA 887" for a cleaner search.
+function spacedFlightNumber(flightNumber) {
+  if (!flightNumber) return flightNumber;
+  const match = flightNumber.match(/^([A-Za-z]+)\s*(\d+)$/);
+  return match ? `${match[1]} ${match[2]}` : flightNumber;
 }
 
 function prettyDate(str) {
@@ -241,13 +238,7 @@ function TripForm({ date, onAdd, clients, travelers }) {
             <button
               type="button"
               className="ghost"
-              onClick={() => googleFlightSearch({
-                flightNumber: `${form.airline_code}${form.flight_number}`,
-                airline: form.airline_choice === "Other" ? form.airline_other : form.airline_choice,
-                fromCode: form.from_code,
-                toCode: form.to_code,
-                dateStr: date,
-              })}
+              onClick={() => googleFlightSearch(`${form.airline_code} ${form.flight_number}`.trim())}
               title="Look up on Google"
             >🔎</button>
           </div>
@@ -529,13 +520,7 @@ function Tracker({ session }) {
                       type="button"
                       className="ghost"
                       style={{ padding: "0px 6px", fontSize: 10.5, marginLeft: 4 }}
-                      onClick={() => googleFlightSearch({
-                        flightNumber: t.flight_number,
-                        airline: t.airline,
-                        fromCode: t.origin_code || t.from_code,
-                        toCode: t.destination_code || t.to_code,
-                        dateStr: t.travel_date,
-                      })}
+                      onClick={() => googleFlightSearch(spacedFlightNumber(t.flight_number))}
                       title="Look up on Google"
                     >🔎 Look up</button>
                   </div>
@@ -651,7 +636,7 @@ function KnoxShell({ session }) {
       <div className="knoxbar">
         <div className="knoxbar-inner">
           <div>
-            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v1.6</span></div>
+            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v1.7</span></div>
             <div className="knox-sub">OneStone Staff System</div>
           </div>
           <div className="knox-user">
