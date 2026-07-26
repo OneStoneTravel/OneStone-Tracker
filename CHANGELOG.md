@@ -1,5 +1,9 @@
 # Knox Tracker — Changelog
 
+## 1.2 — Jul 25, 2026
+**Added**
+- Google flight lookup — a small 🔎 button on the Add Trip form (next to Flight #) and on every existing trip row, opening a live Google search for that flight's current status in a new tab. No API cost, just a quick second opinion alongside FlightAware's automated data.
+
 ## 1.1 — Jul 25, 2026
 **Added**
 - Version tag now shown in the top bar next to the Knox logo, so it's always clear which version is live.
