@@ -1,5 +1,15 @@
 # Knox Tracker — Changelog
 
+## 1.6 — Jul 25, 2026
+**Added**
+- Departure time is now a scrollable dropdown (15-minute increments) instead of the native time picker, on both Add Trip and the new Edit Trip modal.
+- **Edit Trip** — every trip on the board now has a real Edit button, letting staff correct traveler name, airline, flight number, route, departure time, duration, and booking status after the fact, instead of only being able to change the date or delete and re-add the whole trip.
+
+## 1.5 — Jul 25, 2026
+**Added**
+- Airline code now auto-fills based on the selected airline (e.g. picking "American" fills in "AA") — editable if it's ever wrong, and manual for "Other."
+- Flight # field is now just the number (e.g. "887") instead of the whole code — the two combine automatically into the full flight identifier (e.g. "AA887") used for saving the trip, the FlightAware lookup, and the Google search button.
+
 ## 1.4 — Jul 25, 2026
 **Improved**
 - Google flight lookup now combines everything we already know — airline, route (from → to), and date — into one search query (e.g. "American AA887 flight status PHX to DFW July 25, 2026"), instead of just flight number and date. Trip rows prefer the FlightAware-confirmed route over the manually typed one, once it's available.
