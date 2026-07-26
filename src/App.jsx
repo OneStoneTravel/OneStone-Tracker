@@ -62,9 +62,20 @@ function localDateStr(d) {
   );
 }
 
-function googleFlightSearch(flightNumber) {
+function formatSearchDate(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
+function googleFlightSearch({ flightNumber, airline, fromCode, toCode, dateStr }) {
   if (!flightNumber) return;
-  window.open(`https://www.google.com/search?q=${encodeURIComponent(flightNumber + " flight status")}`, "_blank");
+  const parts = [];
+  if (airline) parts.push(airline);
+  parts.push(flightNumber);
+  parts.push("flight status");
+  if (fromCode && toCode) parts.push(`${fromCode} to ${toCode}`);
+  if (dateStr) parts.push(formatSearchDate(dateStr));
+  window.open(`https://www.google.com/search?q=${encodeURIComponent(parts.join(" "))}`, "_blank");
 }
 
 function prettyDate(str) {
@@ -189,7 +200,18 @@ function TripForm({ date, onAdd, clients, travelers }) {
           <label>Flight #</label>
           <div style={{ display: "flex", gap: 6 }}>
             <input required value={form.flight_number} onChange={set("flight_number")} placeholder="AA887" style={{ flex: 1 }} />
-            <button type="button" className="ghost" onClick={() => googleFlightSearch(form.flight_number)} title="Look up on Google">🔎</button>
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => googleFlightSearch({
+                flightNumber: form.flight_number,
+                airline: form.airline_choice === "Other" ? form.airline_other : form.airline_choice,
+                fromCode: form.from_code,
+                toCode: form.to_code,
+                dateStr: date,
+              })}
+              title="Look up on Google"
+            >🔎</button>
           </div>
         </div>
         <div><label>Departs</label><input required type="time" value={form.departure_time} onChange={set("departure_time")} /></div>
@@ -427,7 +449,19 @@ function Tracker({ session }) {
                     {t.airline} · {t.flight_number} · dep {fmtHour(dep)}
                     {t.origin_code && t.destination_code ? ` · ${t.origin_code} → ${t.destination_code}` : ""}
                     {" "}
-                    <button type="button" className="ghost" style={{ padding: "0px 6px", fontSize: 10.5, marginLeft: 4 }} onClick={() => googleFlightSearch(t.flight_number)} title="Look up on Google">🔎 Look up</button>
+                    <button
+                      type="button"
+                      className="ghost"
+                      style={{ padding: "0px 6px", fontSize: 10.5, marginLeft: 4 }}
+                      onClick={() => googleFlightSearch({
+                        flightNumber: t.flight_number,
+                        airline: t.airline,
+                        fromCode: t.origin_code || t.from_code,
+                        toCode: t.destination_code || t.to_code,
+                        dateStr: t.travel_date,
+                      })}
+                      title="Look up on Google"
+                    >🔎 Look up</button>
                   </div>
                   <div className="date-edit">
                     Date: <input type="date" value={t.travel_date} onChange={(e) => updateTripDate(t.id, e.target.value)} />
@@ -496,7 +530,7 @@ function KnoxShell({ session }) {
       <div className="knoxbar">
         <div className="knoxbar-inner">
           <div>
-            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v1.2</span></div>
+            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v1.4</span></div>
             <div className="knox-sub">OneStone Staff System</div>
           </div>
           <div className="knox-user">
