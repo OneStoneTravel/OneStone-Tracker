@@ -23,6 +23,11 @@ const AIRLINES = [
   "Alaska", "Spirit", "Frontier", "Allegiant", "Hawaiian", "Other",
 ];
 
+const AIRLINE_CODES = {
+  American: "AA", United: "UA", Delta: "DL", Southwest: "WN", JetBlue: "B6",
+  Alaska: "AS", Spirit: "NK", Frontier: "F9", Allegiant: "G4", Hawaiian: "HA",
+};
+
 function tenureLabel(dateJoined) {
   if (!dateJoined) return "";
   const start = new Date(dateJoined + "T00:00:00");
@@ -126,6 +131,7 @@ function emptyForm() {
     to_code: "",
     airline_choice: "",
     airline_other: "",
+    airline_code: "",
     flight_number: "",
     departure_time: "09:00",
     duration_hours: 2.5,
@@ -188,7 +194,14 @@ function TripForm({ date, onAdd, clients, travelers }) {
         <div><label>To</label><input value={form.to_code} onChange={set("to_code")} placeholder="DFW" /></div>
         <div>
           <label>Airline</label>
-          <select required value={form.airline_choice} onChange={set("airline_choice")}>
+          <select
+            required
+            value={form.airline_choice}
+            onChange={(e) => {
+              const val = e.target.value;
+              setForm({ ...form, airline_choice: val, airline_code: AIRLINE_CODES[val] || "" });
+            }}
+          >
             <option value="">Select…</option>
             {AIRLINES.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
@@ -197,14 +210,24 @@ function TripForm({ date, onAdd, clients, travelers }) {
           <div><label>Airline name</label><input required value={form.airline_other} onChange={set("airline_other")} placeholder="Airline name" /></div>
         )}
         <div>
-          <label>Flight #</label>
+          <label>Airline code</label>
+          <input
+            required
+            value={form.airline_code}
+            onChange={(e) => setForm({ ...form, airline_code: e.target.value.toUpperCase() })}
+            placeholder="AA"
+            style={{ textTransform: "uppercase" }}
+          />
+        </div>
+        <div>
+          <label>Flight number</label>
           <div style={{ display: "flex", gap: 6 }}>
-            <input required value={form.flight_number} onChange={set("flight_number")} placeholder="AA887" style={{ flex: 1 }} />
+            <input required value={form.flight_number} onChange={set("flight_number")} placeholder="887" style={{ flex: 1 }} />
             <button
               type="button"
               className="ghost"
               onClick={() => googleFlightSearch({
-                flightNumber: form.flight_number,
+                flightNumber: `${form.airline_code}${form.flight_number}`,
                 airline: form.airline_choice === "Other" ? form.airline_other : form.airline_choice,
                 fromCode: form.from_code,
                 toCode: form.to_code,
@@ -343,6 +366,7 @@ function Tracker({ session }) {
     }
 
     const airline = form.airline_choice === "Other" ? form.airline_other : form.airline_choice;
+    const fullFlightNumber = `${form.airline_code}${form.flight_number}`.trim();
 
     await supabase.from("trips").insert({
       client_id: form.client_id || null,
@@ -354,7 +378,7 @@ function Tracker({ session }) {
       from_code: form.from_code || null,
       to_code: form.to_code || null,
       airline,
-      flight_number: form.flight_number,
+      flight_number: fullFlightNumber,
       travel_date: tripDate,
       departure_time: form.departure_time,
       duration_hours: parseFloat(form.duration_hours) || 2,
@@ -530,7 +554,7 @@ function KnoxShell({ session }) {
       <div className="knoxbar">
         <div className="knoxbar-inner">
           <div>
-            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v1.4</span></div>
+            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v1.5</span></div>
             <div className="knox-sub">OneStone Staff System</div>
           </div>
           <div className="knox-user">
