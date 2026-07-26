@@ -28,6 +28,21 @@ const AIRLINE_CODES = {
   Alaska: "AS", Spirit: "NK", Frontier: "F9", Allegiant: "G4", Hawaiian: "HA",
 };
 
+function generateTimeOptions() {
+  const opts = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      const value = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+      const hr12 = h % 12 === 0 ? 12 : h % 12;
+      const ampm = h < 12 ? "AM" : "PM";
+      const label = `${hr12}:${String(m).padStart(2, "0")} ${ampm}`;
+      opts.push({ value, label });
+    }
+  }
+  return opts;
+}
+const TIME_OPTIONS = generateTimeOptions();
+
 function tenureLabel(dateJoined) {
   if (!dateJoined) return "";
   const start = new Date(dateJoined + "T00:00:00");
@@ -237,7 +252,12 @@ function TripForm({ date, onAdd, clients, travelers }) {
             >🔎</button>
           </div>
         </div>
-        <div><label>Departs</label><input required type="time" value={form.departure_time} onChange={set("departure_time")} /></div>
+        <div>
+          <label>Departs</label>
+          <select required value={form.departure_time} onChange={set("departure_time")}>
+            {TIME_OPTIONS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+        </div>
         <div><label>Duration (hrs)</label><input required type="number" step="0.1" min="0.2" value={form.duration_hours} onChange={set("duration_hours")} /></div>
         <div>
           <label>Booking status</label>
@@ -308,6 +328,8 @@ function Tracker({ session }) {
   const [clients, setClients] = useState([]);
   const [travelers, setTravelers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingTrip, setEditingTrip] = useState(null);
+  const [editTripForm, setEditTripForm] = useState(null);
 
   async function loadClients() {
     const { data, error } = await supabase.from("clients").select("*").eq("status", "active").order("company_name");
@@ -392,6 +414,36 @@ function Tracker({ session }) {
 
   async function removeTrip(id) {
     await supabase.from("trips").delete().eq("id", id);
+    loadTrips();
+    loadAllTrips();
+  }
+
+  function openEditTrip(t) {
+    setEditingTrip(t);
+    setEditTripForm({
+      client_name: t.client_name || "",
+      airline: t.airline || "",
+      flight_number: t.flight_number || "",
+      from_code: t.from_code || "",
+      to_code: t.to_code || "",
+      departure_time: t.departure_time?.slice(0, 5) || "09:00",
+      duration_hours: t.duration_hours || 2.5,
+      booking_status: t.booking_status || "pending",
+    });
+  }
+
+  async function saveEditTrip() {
+    await supabase.from("trips").update({
+      client_name: editTripForm.client_name,
+      airline: editTripForm.airline,
+      flight_number: editTripForm.flight_number,
+      from_code: editTripForm.from_code || null,
+      to_code: editTripForm.to_code || null,
+      departure_time: editTripForm.departure_time,
+      duration_hours: parseFloat(editTripForm.duration_hours) || 2,
+      booking_status: editTripForm.booking_status,
+    }).eq("id", editingTrip.id);
+    setEditingTrip(null);
     loadTrips();
     loadAllTrips();
   }
@@ -525,7 +577,8 @@ function Tracker({ session }) {
                   )}
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <button className="ghost" onClick={() => removeTrip(t.id)}>Remove</button>
+                  <button className="ghost" onClick={() => openEditTrip(t)}>Edit</button>
+                  <button className="ghost" style={{ marginLeft: 6 }} onClick={() => removeTrip(t.id)}>Remove</button>
                 </div>
               </div>
               <TripNotes tripId={t.id} session={session} />
@@ -542,6 +595,50 @@ function Tracker({ session }) {
       </div>
 
       <FutureTrips trips={allTrips} today={today} />
+
+      {editingTrip && (
+        <div className="modal-overlay" onClick={(ev) => { if (ev.target === ev.currentTarget) setEditingTrip(null); }}>
+          <div className="modal-box">
+            <h3>Edit trip</h3>
+            <div className="modal-sub">{editingTrip.travel_date}</div>
+
+            <label>Traveler</label>
+            <input value={editTripForm.client_name} onChange={(e) => setEditTripForm({ ...editTripForm, client_name: e.target.value })} />
+
+            <label>Airline</label>
+            <input value={editTripForm.airline} onChange={(e) => setEditTripForm({ ...editTripForm, airline: e.target.value })} />
+
+            <label>Flight #</label>
+            <input value={editTripForm.flight_number} onChange={(e) => setEditTripForm({ ...editTripForm, flight_number: e.target.value.toUpperCase() })} />
+
+            <label>From</label>
+            <input value={editTripForm.from_code} onChange={(e) => setEditTripForm({ ...editTripForm, from_code: e.target.value.toUpperCase() })} />
+
+            <label>To</label>
+            <input value={editTripForm.to_code} onChange={(e) => setEditTripForm({ ...editTripForm, to_code: e.target.value.toUpperCase() })} />
+
+            <label>Departs</label>
+            <select value={editTripForm.departure_time} onChange={(e) => setEditTripForm({ ...editTripForm, departure_time: e.target.value })}>
+              {TIME_OPTIONS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+
+            <label>Duration (hrs)</label>
+            <input type="number" step="0.1" min="0.2" value={editTripForm.duration_hours} onChange={(e) => setEditTripForm({ ...editTripForm, duration_hours: e.target.value })} />
+
+            <label>Booking status</label>
+            <select value={editTripForm.booking_status} onChange={(e) => setEditTripForm({ ...editTripForm, booking_status: e.target.value })}>
+              <option value="pending">Pending</option>
+              <option value="working">Agent Working On It</option>
+              <option value="booked">Booked &amp; Confirmed</option>
+            </select>
+
+            <div className="modal-actions">
+              <button className="ghost" onClick={() => setEditingTrip(null)}>Cancel</button>
+              <button onClick={saveEditTrip}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -554,7 +651,7 @@ function KnoxShell({ session }) {
       <div className="knoxbar">
         <div className="knoxbar-inner">
           <div>
-            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v1.5</span></div>
+            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v1.6</span></div>
             <div className="knox-sub">OneStone Staff System</div>
           </div>
           <div className="knox-user">
