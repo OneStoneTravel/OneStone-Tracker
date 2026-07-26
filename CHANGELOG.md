@@ -1,5 +1,13 @@
 # Knox Tracker — Changelog
 
+## 1.4 — Jul 25, 2026
+**Improved**
+- Google flight lookup now combines everything we already know — airline, route (from → to), and date — into one search query (e.g. "American AA887 flight status PHX to DFW July 25, 2026"), instead of just flight number and date. Trip rows prefer the FlightAware-confirmed route over the manually typed one, once it's available.
+
+## 1.3 — Jul 25, 2026
+**Fixed**
+- Google flight lookup now includes the trip's actual date in the search (e.g. "AA887 flight status July 25, 2026") instead of just the flight number alone — since flight numbers repeat daily, this avoids accidentally surfacing a different day's flight with the same number.
+
 ## 1.2 — Jul 25, 2026
 **Added**
 - Google flight lookup — a small 🔎 button on the Add Trip form (next to Flight #) and on every existing trip row, opening a live Google search for that flight's current status in a new tab. No API cost, just a quick second opinion alongside FlightAware's automated data.
