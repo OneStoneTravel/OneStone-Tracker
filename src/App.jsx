@@ -28,6 +28,31 @@ const AIRLINE_CODES = {
   Alaska: "AS", Spirit: "NK", Frontier: "F9", Allegiant: "G4", Hawaiian: "HA",
 };
 
+// Matches Ehlo's plan tier flight-booking fee rates, so the auto-logged fee
+// is consistent between the two systems.
+const KNOX_FLIGHT_FEE_RATES = { Starter: 40, Growth: 35, Premier: 30, Anchor: 32 };
+
+// When a trip becomes "Booked & Confirmed" for a real client, log the booking
+// fee to Ehlo automatically. The actual ticket cost isn't captured in Knox,
+// so a client note flags that it still needs to be entered.
+async function logBookingFeeToEhlo(trip, session) {
+  const fee = KNOX_FLIGHT_FEE_RATES[trip.plan_tier] ?? 32;
+  await supabase.from("client_expenses").insert({
+    client_id: trip.client_id,
+    traveler_name: trip.client_name,
+    category: "Flight",
+    amount: 0,
+    fee,
+    entry_date: trip.travel_date,
+    created_by: session.user.email,
+  });
+  await supabase.from("client_notes").insert({
+    client_id: trip.client_id,
+    note: `Trip booked in Knox Tracker: ${trip.client_name}, ${trip.airline} ${trip.flight_number} on ${trip.travel_date}. Booking fee ($${fee}) logged automatically — still need to enter the actual ticket cost in Billing.`,
+    created_by: session.user.email,
+  });
+}
+
 function generateTimeOptions() {
   const opts = [];
   for (let h = 0; h < 24; h++) {
@@ -153,9 +178,43 @@ function emptyForm() {
 
 function TripForm({ date, onAdd, clients, travelers }) {
   const [form, setForm] = useState(emptyForm());
+  const [budgetInfo, setBudgetInfo] = useState(null);
+  const [travelerTripCount, setTravelerTripCount] = useState(null);
 
   const selectedClient = clients.find((c) => c.id === form.client_id);
   const clientTravelers = travelers.filter((t) => t.client_id === form.client_id);
+
+  useEffect(() => {
+    async function loadBudget() {
+      if (!form.client_id || !selectedClient) { setBudgetInfo(null); return; }
+      const monthStart = localDateStr().slice(0, 7) + "-01";
+      const { data } = await supabase
+        .from("client_expenses")
+        .select("amount, category")
+        .eq("client_id", form.client_id)
+        .neq("category", "Booking Fee")
+        .gte("entry_date", monthStart);
+      const spend = (data || []).reduce((s, e) => s + Number(e.amount), 0);
+      const threshold = selectedClient.monthly_threshold || 0;
+      const pct = threshold > 0 ? Math.round((spend / threshold) * 100) : 0;
+      setBudgetInfo({ spend, threshold, pct });
+    }
+    loadBudget();
+  }, [form.client_id]);
+
+  useEffect(() => {
+    async function loadTravelerHistory() {
+      if (!form.traveler_choice || form.traveler_choice === "__new__") { setTravelerTripCount(null); return; }
+      const yearStart = `${new Date().getFullYear()}-01-01`;
+      const { count } = await supabase
+        .from("trips")
+        .select("id", { count: "exact", head: true })
+        .eq("client_name", form.traveler_choice)
+        .gte("travel_date", yearStart);
+      setTravelerTripCount(count || 0);
+    }
+    loadTravelerHistory();
+  }, [form.traveler_choice]);
 
   async function submit(e) {
     e.preventDefault();
@@ -189,12 +248,30 @@ function TripForm({ date, onAdd, clients, travelers }) {
           <input disabled value={selectedClient ? tenureLabel(selectedClient.date_joined) : ""} placeholder="—" />
         </div>
         <div>
+          <label>Budget this month</label>
+          {budgetInfo ? (
+            <div style={{
+              padding: "9px 10px", fontSize: 12.5, fontWeight: 600, borderRadius: 6, border: "1px solid var(--line)",
+              color: budgetInfo.pct >= 90 ? "#B0432F" : budgetInfo.pct >= 75 ? "#B5651D" : budgetInfo.pct >= 50 ? "#9A6B15" : "#2F6B4F",
+            }}>
+              {budgetInfo.pct}% used (${budgetInfo.spend.toLocaleString()} of ${budgetInfo.threshold.toLocaleString()})
+            </div>
+          ) : (
+            <input disabled value="" placeholder="—" />
+          )}
+        </div>
+        <div>
           <label>Traveler</label>
           <select required value={form.traveler_choice} onChange={set("traveler_choice")} disabled={!form.client_id}>
             <option value="">{form.client_id ? "Select a traveler…" : "Pick a company first"}</option>
             {clientTravelers.map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}
             <option value="__new__">+ Add new traveler…</option>
           </select>
+          {travelerTripCount !== null && (
+            <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+              {travelerTripCount} trip{travelerTripCount === 1 ? "" : "s"} this year
+            </div>
+          )}
         </div>
         {form.traveler_choice === "__new__" && (
           <div>
@@ -381,7 +458,7 @@ function Tracker({ session }) {
     const airline = form.airline_choice === "Other" ? form.airline_other : form.airline_choice;
     const fullFlightNumber = `${form.airline_code}${form.flight_number}`.trim();
 
-    await supabase.from("trips").insert({
+    const { data: newTrip } = await supabase.from("trips").insert({
       client_id: form.client_id || null,
       company_name: client?.company_name || null,
       client_number: client?.client_number || null,
@@ -398,7 +475,13 @@ function Tracker({ session }) {
       status: "ontime",
       booking_status: form.booking_status,
       entered_by: session.user.email,
-    });
+    }).select().single();
+
+    if (newTrip && newTrip.booking_status === "booked" && newTrip.client_id) {
+      await logBookingFeeToEhlo(newTrip, session);
+      await supabase.from("trips").update({ fee_logged_to_ehlo: true }).eq("id", newTrip.id);
+    }
+
     loadTrips();
     loadAllTrips();
   }
@@ -407,6 +490,20 @@ function Tracker({ session }) {
     await supabase.from("trips").delete().eq("id", id);
     loadTrips();
     loadAllTrips();
+  }
+
+  async function flagDisruption(t) {
+    const note = prompt(`What happened with ${t.client_name}'s trip (${t.airline} ${t.flight_number})? This gets logged for billing review.`);
+    if (note === null || !note.trim()) return;
+    await supabase.from("trips").update({ had_disruption: true }).eq("id", t.id);
+    if (t.client_id) {
+      await supabase.from("client_notes").insert({
+        client_id: t.client_id,
+        note: `Disruption on ${t.client_name}'s trip (${t.airline} ${t.flight_number}, ${t.travel_date}): ${note.trim()} — check for extra costs to bill.`,
+        created_by: session.user.email,
+      });
+    }
+    loadTrips();
   }
 
   function openEditTrip(t) {
@@ -434,6 +531,13 @@ function Tracker({ session }) {
       duration_hours: parseFloat(editTripForm.duration_hours) || 2,
       booking_status: editTripForm.booking_status,
     }).eq("id", editingTrip.id);
+
+    const justBooked = editingTrip.booking_status !== "booked" && editTripForm.booking_status === "booked";
+    if (justBooked && editingTrip.client_id && !editingTrip.fee_logged_to_ehlo) {
+      await logBookingFeeToEhlo({ ...editingTrip, ...editTripForm }, session);
+      await supabase.from("trips").update({ fee_logged_to_ehlo: true }).eq("id", editingTrip.id);
+    }
+
     setEditingTrip(null);
     loadTrips();
     loadAllTrips();
@@ -564,6 +668,10 @@ function Tracker({ session }) {
                 <div style={{ textAlign: "right" }}>
                   <button className="ghost" onClick={() => openEditTrip(t)}>Edit</button>
                   <button className="ghost" style={{ marginLeft: 6 }} onClick={() => removeTrip(t.id)}>Remove</button>
+                  <br />
+                  <button className="ghost" style={{ marginTop: 6, color: t.had_disruption ? "var(--red)" : undefined, borderColor: t.had_disruption ? "var(--red)" : undefined }} onClick={() => flagDisruption(t)}>
+                    {t.had_disruption ? "⚠ Disruption logged" : "Flag disruption"}
+                  </button>
                 </div>
               </div>
               <TripNotes tripId={t.id} session={session} />
@@ -636,7 +744,7 @@ function KnoxShell({ session }) {
       <div className="knoxbar">
         <div className="knoxbar-inner">
           <div>
-            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v1.7</span></div>
+            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v1.8</span></div>
             <div className="knox-sub">OneStone Staff System</div>
           </div>
           <div className="knox-user">
