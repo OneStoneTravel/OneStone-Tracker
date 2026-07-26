@@ -1,5 +1,12 @@
 # Knox Tracker — Changelog
 
+## 1.8 — Jul 25, 2026
+**Added — cross-system features with Ehlo Client**
+- Auto-logged booking fees: when a trip becomes "Booked & Confirmed" for a real client, the standard booking fee is automatically logged to Ehlo's Billing, along with a client note flagging that the actual ticket cost still needs to be entered (Knox doesn't capture ticket price).
+- Client budget hint: selecting a company on Add Trip now shows how much of their monthly threshold is used so far, color-coded the same way Ehlo shows it.
+- Traveler trip history: selecting a traveler shows how many trips they've taken this year.
+- Disruption flag: a "Flag disruption" button on every trip lets staff note what went wrong — this creates a client note in Ehlo so the extra cost doesn't get forgotten during billing review.
+
 ## 1.7 — Jul 25, 2026
 **Changed**
 - Google flight lookup simplified back down to just "[airline code] [flight number]" (e.g. "AA 887") — the earlier version added route and date to the search, but that extra detail was actually making results less accurate, not more.
