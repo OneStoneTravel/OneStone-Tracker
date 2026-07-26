@@ -62,6 +62,11 @@ function localDateStr(d) {
   );
 }
 
+function googleFlightSearch(flightNumber) {
+  if (!flightNumber) return;
+  window.open(`https://www.google.com/search?q=${encodeURIComponent(flightNumber + " flight status")}`, "_blank");
+}
+
 function prettyDate(str) {
   const [y, m, d] = str.split("-").map(Number);
   const dt = new Date(y, m - 1, d);
@@ -180,7 +185,13 @@ function TripForm({ date, onAdd, clients, travelers }) {
         {form.airline_choice === "Other" && (
           <div><label>Airline name</label><input required value={form.airline_other} onChange={set("airline_other")} placeholder="Airline name" /></div>
         )}
-        <div><label>Flight #</label><input required value={form.flight_number} onChange={set("flight_number")} placeholder="AA887" /></div>
+        <div>
+          <label>Flight #</label>
+          <div style={{ display: "flex", gap: 6 }}>
+            <input required value={form.flight_number} onChange={set("flight_number")} placeholder="AA887" style={{ flex: 1 }} />
+            <button type="button" className="ghost" onClick={() => googleFlightSearch(form.flight_number)} title="Look up on Google">🔎</button>
+          </div>
+        </div>
         <div><label>Departs</label><input required type="time" value={form.departure_time} onChange={set("departure_time")} /></div>
         <div><label>Duration (hrs)</label><input required type="number" step="0.1" min="0.2" value={form.duration_hours} onChange={set("duration_hours")} /></div>
         <div>
@@ -415,6 +426,8 @@ function Tracker({ session }) {
                   <div className="flightinfo">
                     {t.airline} · {t.flight_number} · dep {fmtHour(dep)}
                     {t.origin_code && t.destination_code ? ` · ${t.origin_code} → ${t.destination_code}` : ""}
+                    {" "}
+                    <button type="button" className="ghost" style={{ padding: "0px 6px", fontSize: 10.5, marginLeft: 4 }} onClick={() => googleFlightSearch(t.flight_number)} title="Look up on Google">🔎 Look up</button>
                   </div>
                   <div className="date-edit">
                     Date: <input type="date" value={t.travel_date} onChange={(e) => updateTripDate(t.id, e.target.value)} />
@@ -483,7 +496,7 @@ function KnoxShell({ session }) {
       <div className="knoxbar">
         <div className="knoxbar-inner">
           <div>
-            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v1.1</span></div>
+            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v1.2</span></div>
             <div className="knox-sub">OneStone Staff System</div>
           </div>
           <div className="knox-user">
