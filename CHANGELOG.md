@@ -1,5 +1,9 @@
 # Knox Tracker — Changelog
 
+## 1.7 — Jul 25, 2026
+**Changed**
+- Google flight lookup simplified back down to just "[airline code] [flight number]" (e.g. "AA 887") — the earlier version added route and date to the search, but that extra detail was actually making results less accurate, not more.
+
 ## 1.6 — Jul 25, 2026
 **Added**
 - Departure time is now a scrollable dropdown (15-minute increments) instead of the native time picker, on both Add Trip and the new Edit Trip modal.
