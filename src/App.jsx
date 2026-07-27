@@ -45,6 +45,7 @@ async function logBookingFeeToEhlo(trip, session) {
     fee,
     entry_date: trip.travel_date,
     created_by: session.user.email,
+    source_trip_id: trip.id,
   });
   await supabase.from("client_notes").insert({
     client_id: trip.client_id,
@@ -486,8 +487,30 @@ function Tracker({ session }) {
     loadAllTrips();
   }
 
-  async function removeTrip(id) {
-    await supabase.from("trips").delete().eq("id", id);
+  async function removeTrip(trip) {
+    if (trip.fee_logged_to_ehlo) {
+      const { data: linkedExpense } = await supabase
+        .from("client_expenses")
+        .select("*")
+        .eq("source_trip_id", trip.id)
+        .maybeSingle();
+
+      if (linkedExpense) {
+        if (Number(linkedExpense.amount) === 0) {
+          // Nothing of value entered yet on the Ehlo side — safe to remove the auto-generated placeholder too
+          await supabase.from("client_expenses").delete().eq("id", linkedExpense.id);
+        } else {
+          // Someone already entered a real ticket cost — never silently delete real billing data
+          await supabase.from("client_notes").insert({
+            client_id: linkedExpense.client_id,
+            note: `Heads up: the Knox trip this billing entry came from (${trip.client_name}, ${trip.airline} ${trip.flight_number}, ${trip.travel_date}) was deleted. Please verify this $${linkedExpense.amount} entry is still correct.`,
+            created_by: session.user.email,
+          });
+        }
+      }
+    }
+
+    await supabase.from("trips").delete().eq("id", trip.id);
     loadTrips();
     loadAllTrips();
   }
@@ -667,7 +690,7 @@ function Tracker({ session }) {
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <button className="ghost" onClick={() => openEditTrip(t)}>Edit</button>
-                  <button className="ghost" style={{ marginLeft: 6 }} onClick={() => removeTrip(t.id)}>Remove</button>
+                  <button className="ghost" style={{ marginLeft: 6 }} onClick={() => removeTrip(t)}>Remove</button>
                   <br />
                   <button className="ghost" style={{ marginTop: 6, color: t.had_disruption ? "var(--red)" : undefined, borderColor: t.had_disruption ? "var(--red)" : undefined }} onClick={() => flagDisruption(t)}>
                     {t.had_disruption ? "⚠ Disruption logged" : "Flag disruption"}
@@ -744,7 +767,7 @@ function KnoxShell({ session }) {
       <div className="knoxbar">
         <div className="knoxbar-inner">
           <div>
-            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v1.8</span></div>
+            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v1.9</span></div>
             <div className="knox-sub">OneStone Staff System</div>
           </div>
           <div className="knox-user">
