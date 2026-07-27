@@ -1,5 +1,9 @@
 # Knox Tracker — Changelog
 
+## 1.9 — Jul 27, 2026
+**Fixed**
+- Orphaned billing entries: deleting a trip that already had its booking fee auto-logged to Ehlo used to leave that fee sitting there with nothing cleaning it up. Now, deleting a trip checks the linked Ehlo entry first — if it's still untouched ($0, nobody's added the real ticket cost yet), it gets removed along with the trip. If someone already entered a real number, it's never silently deleted — instead a client note flags it for manual review.
+
 ## 1.8 — Jul 25, 2026
 **Added — cross-system features with Ehlo Client**
 - Auto-logged booking fees: when a trip becomes "Booked & Confirmed" for a real client, the standard booking fee is automatically logged to Ehlo's Billing, along with a client note flagging that the actual ticket cost still needs to be entered (Knox doesn't capture ticket price).
