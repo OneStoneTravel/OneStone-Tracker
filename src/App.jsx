@@ -28,6 +28,13 @@ const AIRLINE_CODES = {
   Alaska: "AS", Spirit: "NK", Frontier: "F9", Allegiant: "G4", Hawaiian: "HA",
 };
 
+const HOTEL_BRANDS = ["Marriott", "Hilton", "Hyatt", "IHG (Holiday Inn/InterContinental)", "Best Western", "Choice Hotels", "Wyndham", "Other"];
+const CAR_COMPANIES = ["Hertz", "Enterprise", "Avis", "Budget", "National", "Alamo", "Other"];
+
+// Matches Ehlo's plan tier "other" booking fee rate (hotel/car), so fees
+// auto-logged from Knox stay consistent with Ehlo's own rate schedule.
+const KNOX_OTHER_FEE_RATES = { Starter: 25, Growth: 20, Premier: 15, Anchor: 32 };
+
 // Matches Ehlo's plan tier flight-booking fee rates, so the auto-logged fee
 // is consistent between the two systems.
 const KNOX_FLIGHT_FEE_RATES = { Starter: 40, Growth: 35, Premier: 30, Anchor: 32 };
@@ -36,21 +43,54 @@ const KNOX_FLIGHT_FEE_RATES = { Starter: 40, Growth: 35, Premier: 30, Anchor: 32
 // fee to Ehlo automatically. The actual ticket cost isn't captured in Knox,
 // so a client note flags that it still needs to be entered.
 async function logBookingFeeToEhlo(trip, session) {
-  const fee = KNOX_FLIGHT_FEE_RATES[trip.plan_tier] ?? 32;
+  const flightFee = KNOX_FLIGHT_FEE_RATES[trip.plan_tier] ?? 32;
+  const otherFee = KNOX_OTHER_FEE_RATES[trip.plan_tier] ?? 32;
   const ticketPrice = Number(trip.ticket_price) || 0;
+  const noteLines = [];
+
   await supabase.from("client_expenses").insert({
     client_id: trip.client_id,
     traveler_name: trip.client_name,
     category: "Flight",
     amount: ticketPrice,
-    fee,
+    fee: flightFee,
     entry_date: trip.travel_date,
     created_by: session.user.email,
     source_trip_id: trip.id,
   });
+  noteLines.push(`Ticket cost ($${ticketPrice.toFixed(2)}) and booking fee ($${flightFee}) logged.`);
+
+  if (trip.has_hotel && trip.hotel_price) {
+    await supabase.from("client_expenses").insert({
+      client_id: trip.client_id,
+      traveler_name: trip.client_name,
+      category: "Hotel",
+      amount: Number(trip.hotel_price) || 0,
+      fee: otherFee,
+      entry_date: trip.travel_date,
+      created_by: session.user.email,
+      source_trip_id: trip.id,
+    });
+    noteLines.push(`Hotel (${trip.hotel_brand}, conf# ${trip.hotel_confirmation || "—"}): $${Number(trip.hotel_price).toFixed(2)} + $${otherFee} fee logged.`);
+  }
+
+  if (trip.has_car && trip.car_price) {
+    await supabase.from("client_expenses").insert({
+      client_id: trip.client_id,
+      traveler_name: trip.client_name,
+      category: "Car",
+      amount: Number(trip.car_price) || 0,
+      fee: otherFee,
+      entry_date: trip.travel_date,
+      created_by: session.user.email,
+      source_trip_id: trip.id,
+    });
+    noteLines.push(`Rental car (${trip.car_company}, conf# ${trip.car_confirmation || "—"}): $${Number(trip.car_price).toFixed(2)} + $${otherFee} fee logged.`);
+  }
+
   await supabase.from("client_notes").insert({
     client_id: trip.client_id,
-    note: `Trip booked in Knox Tracker: ${trip.client_name}, ${trip.airline} ${trip.flight_number} on ${trip.travel_date}. Ticket cost ($${ticketPrice.toFixed(2)}) and booking fee ($${fee}) both logged automatically.`,
+    note: `Trip booked in Knox Tracker: ${trip.client_name}, ${trip.airline} ${trip.flight_number} on ${trip.travel_date}. ${noteLines.join(" ")}`,
     created_by: session.user.email,
   });
 }
@@ -176,6 +216,18 @@ function emptyForm() {
     duration_hours: 2.5,
     booking_status: "pending",
     ticket_price: "",
+    has_hotel: "no",
+    hotel_brand: "",
+    hotel_price: "",
+    hotel_confirmation: "",
+    hotel_checkin: "",
+    hotel_checkout: "",
+    has_car: "no",
+    car_company: "",
+    car_price: "",
+    car_confirmation: "",
+    car_pickup_date: "",
+    car_dropoff_date: "",
   };
 }
 
@@ -186,6 +238,7 @@ function TripForm({ date, onAdd, clients, travelers }) {
 
   const selectedClient = clients.find((c) => c.id === form.client_id);
   const clientTravelers = travelers.filter((t) => t.client_id === form.client_id);
+  const selectedTraveler = clientTravelers.find((t) => t.name === form.traveler_choice);
 
   useEffect(() => {
     async function loadBudget() {
@@ -344,6 +397,59 @@ function TripForm({ date, onAdd, clients, travelers }) {
             <input required type="number" step="0.01" min="0" value={form.ticket_price} onChange={set("ticket_price")} placeholder="482.50" />
           </div>
         )}
+
+        <div className="form-full" style={{ gridColumn: "1 / -1", borderTop: "1px solid var(--line)", marginTop: 6, paddingTop: 10 }}>
+          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+            <div>
+              <label>Hotel?</label>
+              <select value={form.has_hotel} onChange={set("has_hotel")}>
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+              </select>
+            </div>
+            {form.has_hotel === "yes" && (
+              <>
+                <div><label>Hotel brand</label>
+                  <select value={form.hotel_brand} onChange={set("hotel_brand")}>
+                    <option value="">Select…</option>
+                    {HOTEL_BRANDS.map((h) => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+                <div><label>Hotel price ($)</label><input type="number" step="0.01" min="0" value={form.hotel_price} onChange={set("hotel_price")} placeholder="189.00" /></div>
+                <div><label>Confirmation #</label><input value={form.hotel_confirmation} onChange={set("hotel_confirmation")} /></div>
+                <div><label>Check-in</label><input type="date" value={form.hotel_checkin} onChange={set("hotel_checkin")} /></div>
+                <div><label>Check-out</label><input type="date" value={form.hotel_checkout} onChange={set("hotel_checkout")} /></div>
+                <div><label>Hotel loyalty #</label><input disabled value={selectedTraveler?.hotel_loyalty_number || ""} placeholder="—" /></div>
+              </>
+            )}
+          </div>
+
+          <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginTop: 14 }}>
+            <div>
+              <label>Rental car?</label>
+              <select value={form.has_car} onChange={set("has_car")}>
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+              </select>
+            </div>
+            {form.has_car === "yes" && (
+              <>
+                <div><label>Car company</label>
+                  <select value={form.car_company} onChange={set("car_company")}>
+                    <option value="">Select…</option>
+                    {CAR_COMPANIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div><label>Car price ($)</label><input type="number" step="0.01" min="0" value={form.car_price} onChange={set("car_price")} placeholder="145.00" /></div>
+                <div><label>Confirmation #</label><input value={form.car_confirmation} onChange={set("car_confirmation")} /></div>
+                <div><label>Pickup date</label><input type="date" value={form.car_pickup_date} onChange={set("car_pickup_date")} /></div>
+                <div><label>Dropoff date</label><input type="date" value={form.car_dropoff_date} onChange={set("car_dropoff_date")} /></div>
+                <div><label>Car loyalty #</label><input disabled value={selectedTraveler?.car_loyalty_number || ""} placeholder="—" /></div>
+              </>
+            )}
+          </div>
+        </div>
+
         <div><button type="submit">Add trip</button></div>
       </form>
     </div>
@@ -406,6 +512,7 @@ function Tracker({ session }) {
   const [travelers, setTravelers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingTrip, setEditingTrip] = useState(null);
+  const [expandedDetails, setExpandedDetails] = useState({});
   const [editTripForm, setEditTripForm] = useState(null);
 
   async function loadClients() {
@@ -484,6 +591,18 @@ function Tracker({ session }) {
       status: "ontime",
       booking_status: form.booking_status,
       ticket_price: form.booking_status === "booked" ? (parseFloat(form.ticket_price) || 0) : null,
+      has_hotel: form.has_hotel === "yes",
+      hotel_brand: form.has_hotel === "yes" ? form.hotel_brand : null,
+      hotel_price: form.has_hotel === "yes" ? (parseFloat(form.hotel_price) || 0) : null,
+      hotel_confirmation: form.has_hotel === "yes" ? form.hotel_confirmation : null,
+      hotel_checkin: form.has_hotel === "yes" ? (form.hotel_checkin || null) : null,
+      hotel_checkout: form.has_hotel === "yes" ? (form.hotel_checkout || null) : null,
+      has_car: form.has_car === "yes",
+      car_company: form.has_car === "yes" ? form.car_company : null,
+      car_price: form.has_car === "yes" ? (parseFloat(form.car_price) || 0) : null,
+      car_confirmation: form.has_car === "yes" ? form.car_confirmation : null,
+      car_pickup_date: form.has_car === "yes" ? (form.car_pickup_date || null) : null,
+      car_dropoff_date: form.has_car === "yes" ? (form.car_dropoff_date || null) : null,
       entered_by: session.user.email,
     }).select().single();
 
@@ -498,24 +617,28 @@ function Tracker({ session }) {
 
   async function removeTrip(trip) {
     if (trip.fee_logged_to_ehlo) {
-      const { data: linkedExpense } = await supabase
+      const { data: linkedExpenses } = await supabase
         .from("client_expenses")
         .select("*")
-        .eq("source_trip_id", trip.id)
-        .maybeSingle();
+        .eq("source_trip_id", trip.id);
 
-      if (linkedExpense) {
+      const needsReview = [];
+      for (const linkedExpense of linkedExpenses || []) {
         if (Number(linkedExpense.amount) === 0) {
           // Nothing of value entered yet on the Ehlo side — safe to remove the auto-generated placeholder too
           await supabase.from("client_expenses").delete().eq("id", linkedExpense.id);
         } else {
-          // Someone already entered a real ticket cost — never silently delete real billing data
-          await supabase.from("client_notes").insert({
-            client_id: linkedExpense.client_id,
-            note: `Heads up: the Knox trip this billing entry came from (${trip.client_name}, ${trip.airline} ${trip.flight_number}, ${trip.travel_date}) was deleted. Please verify this $${linkedExpense.amount} entry is still correct.`,
-            created_by: session.user.email,
-          });
+          // Someone already entered a real cost — never silently delete real billing data
+          needsReview.push(`${linkedExpense.category} ($${linkedExpense.amount})`);
         }
+      }
+
+      if (needsReview.length > 0) {
+        await supabase.from("client_notes").insert({
+          client_id: trip.client_id,
+          note: `Heads up: the Knox trip this billing came from (${trip.client_name}, ${trip.airline} ${trip.flight_number}, ${trip.travel_date}) was deleted. Please verify these entries are still correct: ${needsReview.join(", ")}.`,
+          created_by: session.user.email,
+        });
       }
     }
 
@@ -550,11 +673,38 @@ function Tracker({ session }) {
       duration_hours: t.duration_hours || 2.5,
       booking_status: t.booking_status || "pending",
       ticket_price: t.ticket_price ?? "",
+      has_hotel: t.has_hotel ? "yes" : "no",
+      hotel_brand: t.hotel_brand || "",
+      hotel_price: t.hotel_price ?? "",
+      hotel_confirmation: t.hotel_confirmation || "",
+      hotel_checkin: t.hotel_checkin || "",
+      hotel_checkout: t.hotel_checkout || "",
+      has_car: t.has_car ? "yes" : "no",
+      car_company: t.car_company || "",
+      car_price: t.car_price ?? "",
+      car_confirmation: t.car_confirmation || "",
+      car_pickup_date: t.car_pickup_date || "",
+      car_dropoff_date: t.car_dropoff_date || "",
     });
   }
 
   async function saveEditTrip() {
     const newTicketPrice = editTripForm.booking_status === "booked" ? (parseFloat(editTripForm.ticket_price) || 0) : editingTrip.ticket_price;
+
+    const hotelCarPayload = {
+      has_hotel: editTripForm.has_hotel === "yes",
+      hotel_brand: editTripForm.has_hotel === "yes" ? editTripForm.hotel_brand : null,
+      hotel_price: editTripForm.has_hotel === "yes" ? (parseFloat(editTripForm.hotel_price) || 0) : null,
+      hotel_confirmation: editTripForm.has_hotel === "yes" ? editTripForm.hotel_confirmation : null,
+      hotel_checkin: editTripForm.has_hotel === "yes" ? (editTripForm.hotel_checkin || null) : null,
+      hotel_checkout: editTripForm.has_hotel === "yes" ? (editTripForm.hotel_checkout || null) : null,
+      has_car: editTripForm.has_car === "yes",
+      car_company: editTripForm.has_car === "yes" ? editTripForm.car_company : null,
+      car_price: editTripForm.has_car === "yes" ? (parseFloat(editTripForm.car_price) || 0) : null,
+      car_confirmation: editTripForm.has_car === "yes" ? editTripForm.car_confirmation : null,
+      car_pickup_date: editTripForm.has_car === "yes" ? (editTripForm.car_pickup_date || null) : null,
+      car_dropoff_date: editTripForm.has_car === "yes" ? (editTripForm.car_dropoff_date || null) : null,
+    };
 
     await supabase.from("trips").update({
       client_name: editTripForm.client_name,
@@ -566,15 +716,16 @@ function Tracker({ session }) {
       duration_hours: parseFloat(editTripForm.duration_hours) || 2,
       booking_status: editTripForm.booking_status,
       ticket_price: newTicketPrice,
+      ...hotelCarPayload,
     }).eq("id", editingTrip.id);
 
     const justBooked = editingTrip.booking_status !== "booked" && editTripForm.booking_status === "booked";
     if (justBooked && editingTrip.client_id && !editingTrip.fee_logged_to_ehlo) {
-      await logBookingFeeToEhlo({ ...editingTrip, ...editTripForm, ticket_price: newTicketPrice }, session);
+      await logBookingFeeToEhlo({ ...editingTrip, ...editTripForm, ticket_price: newTicketPrice, ...hotelCarPayload }, session);
       await supabase.from("trips").update({ fee_logged_to_ehlo: true }).eq("id", editingTrip.id);
     } else if (editingTrip.fee_logged_to_ehlo && Number(newTicketPrice) !== Number(editingTrip.ticket_price)) {
-      // Price was corrected after the fee was already logged — keep the Ehlo entry in sync
-      await supabase.from("client_expenses").update({ amount: Number(newTicketPrice) || 0 }).eq("source_trip_id", editingTrip.id);
+      // Price was corrected after the fee was already logged — keep the Ehlo Flight entry in sync (not the Hotel/Car ones)
+      await supabase.from("client_expenses").update({ amount: Number(newTicketPrice) || 0 }).eq("source_trip_id", editingTrip.id).eq("category", "Flight");
     }
 
     setEditingTrip(null);
@@ -689,6 +840,32 @@ function Tracker({ session }) {
                       <span className="route-code">{t.destination_code}</span>
                     </div>
                   )}
+
+                  <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+                    <span
+                      style={{ fontSize: 11.5, fontWeight: 600, cursor: t.has_hotel ? "pointer" : "default", color: t.has_hotel ? "var(--green)" : "var(--red)" }}
+                      onClick={() => t.has_hotel && setExpandedDetails({ ...expandedDetails, [t.id + "-hotel"]: !expandedDetails[t.id + "-hotel"] })}
+                    >
+                      {t.has_hotel ? "✓" : "✗"} Hotel
+                    </span>
+                    <span
+                      style={{ fontSize: 11.5, fontWeight: 600, cursor: t.has_car ? "pointer" : "default", color: t.has_car ? "var(--green)" : "var(--red)" }}
+                      onClick={() => t.has_car && setExpandedDetails({ ...expandedDetails, [t.id + "-car"]: !expandedDetails[t.id + "-car"] })}
+                    >
+                      {t.has_car ? "✓" : "✗"} Car
+                    </span>
+                  </div>
+
+                  {expandedDetails[t.id + "-hotel"] && t.has_hotel && (
+                    <div className="phase-line" style={{ marginTop: 4 }}>
+                      🏨 {t.hotel_brand} · ${Number(t.hotel_price || 0).toFixed(2)} · Conf# {t.hotel_confirmation || "—"} · {t.hotel_checkin} → {t.hotel_checkout}
+                    </div>
+                  )}
+                  {expandedDetails[t.id + "-car"] && t.has_car && (
+                    <div className="phase-line" style={{ marginTop: 4 }}>
+                      🚗 {t.car_company} · ${Number(t.car_price || 0).toFixed(2)} · Conf# {t.car_confirmation || "—"} · {t.car_pickup_date} → {t.car_dropoff_date}
+                    </div>
+                  )}
                 </div>
                 <div className="track">
                   <div className="bar" style={{ left: `${left}%`, width: `${width}%`, background: meta.color }} />
@@ -771,6 +948,52 @@ function Tracker({ session }) {
               </>
             )}
 
+            <label>Hotel?</label>
+            <select value={editTripForm.has_hotel} onChange={(e) => setEditTripForm({ ...editTripForm, has_hotel: e.target.value })}>
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+            {editTripForm.has_hotel === "yes" && (
+              <>
+                <label>Hotel brand</label>
+                <select value={editTripForm.hotel_brand} onChange={(e) => setEditTripForm({ ...editTripForm, hotel_brand: e.target.value })}>
+                  <option value="">Select…</option>
+                  {HOTEL_BRANDS.map((h) => <option key={h} value={h}>{h}</option>)}
+                </select>
+                <label>Hotel price ($)</label>
+                <input type="number" step="0.01" min="0" value={editTripForm.hotel_price} onChange={(e) => setEditTripForm({ ...editTripForm, hotel_price: e.target.value })} />
+                <label>Confirmation #</label>
+                <input value={editTripForm.hotel_confirmation} onChange={(e) => setEditTripForm({ ...editTripForm, hotel_confirmation: e.target.value })} />
+                <label>Check-in</label>
+                <input type="date" value={editTripForm.hotel_checkin} onChange={(e) => setEditTripForm({ ...editTripForm, hotel_checkin: e.target.value })} />
+                <label>Check-out</label>
+                <input type="date" value={editTripForm.hotel_checkout} onChange={(e) => setEditTripForm({ ...editTripForm, hotel_checkout: e.target.value })} />
+              </>
+            )}
+
+            <label>Rental car?</label>
+            <select value={editTripForm.has_car} onChange={(e) => setEditTripForm({ ...editTripForm, has_car: e.target.value })}>
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+            {editTripForm.has_car === "yes" && (
+              <>
+                <label>Car company</label>
+                <select value={editTripForm.car_company} onChange={(e) => setEditTripForm({ ...editTripForm, car_company: e.target.value })}>
+                  <option value="">Select…</option>
+                  {CAR_COMPANIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <label>Car price ($)</label>
+                <input type="number" step="0.01" min="0" value={editTripForm.car_price} onChange={(e) => setEditTripForm({ ...editTripForm, car_price: e.target.value })} />
+                <label>Confirmation #</label>
+                <input value={editTripForm.car_confirmation} onChange={(e) => setEditTripForm({ ...editTripForm, car_confirmation: e.target.value })} />
+                <label>Pickup date</label>
+                <input type="date" value={editTripForm.car_pickup_date} onChange={(e) => setEditTripForm({ ...editTripForm, car_pickup_date: e.target.value })} />
+                <label>Dropoff date</label>
+                <input type="date" value={editTripForm.car_dropoff_date} onChange={(e) => setEditTripForm({ ...editTripForm, car_dropoff_date: e.target.value })} />
+              </>
+            )}
+
             <div className="modal-actions">
               <button className="ghost" onClick={() => setEditingTrip(null)}>Cancel</button>
               <button onClick={saveEditTrip}>Save</button>
@@ -790,7 +1013,7 @@ function KnoxShell({ session }) {
       <div className="knoxbar">
         <div className="knoxbar-inner">
           <div>
-            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v2.0</span></div>
+            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v2.1</span></div>
             <div className="knox-sub">OneStone Staff System</div>
           </div>
           <div className="knox-user">
