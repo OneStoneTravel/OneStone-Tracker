@@ -843,6 +843,12 @@ function Tracker({ session }) {
 
                   <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
                     <span
+                      style={{ fontSize: 11.5, fontWeight: 600, cursor: t.ticket_price ? "pointer" : "default", color: t.ticket_price ? "var(--green)" : "var(--red)" }}
+                      onClick={() => t.ticket_price && setExpandedDetails({ ...expandedDetails, [t.id + "-flight"]: !expandedDetails[t.id + "-flight"] })}
+                    >
+                      {t.ticket_price ? "✓" : "✗"} Flight
+                    </span>
+                    <span
                       style={{ fontSize: 11.5, fontWeight: 600, cursor: t.has_hotel ? "pointer" : "default", color: t.has_hotel ? "var(--green)" : "var(--red)" }}
                       onClick={() => t.has_hotel && setExpandedDetails({ ...expandedDetails, [t.id + "-hotel"]: !expandedDetails[t.id + "-hotel"] })}
                     >
@@ -856,16 +862,36 @@ function Tracker({ session }) {
                     </span>
                   </div>
 
+                  {expandedDetails[t.id + "-flight"] && t.ticket_price && (
+                    <div className="phase-line" style={{ marginTop: 4 }}>
+                      ✈ Ticket price: ${Number(t.ticket_price).toFixed(2)} · Booking fee: ${KNOX_FLIGHT_FEE_RATES[t.plan_tier] ?? 32}
+                    </div>
+                  )}
                   {expandedDetails[t.id + "-hotel"] && t.has_hotel && (
                     <div className="phase-line" style={{ marginTop: 4 }}>
-                      🏨 {t.hotel_brand} · ${Number(t.hotel_price || 0).toFixed(2)} · Conf# {t.hotel_confirmation || "—"} · {t.hotel_checkin} → {t.hotel_checkout}
+                      🏨 {t.hotel_brand} · ${Number(t.hotel_price || 0).toFixed(2)} · Conf# {t.hotel_confirmation || "—"} · {t.hotel_checkin} → {t.hotel_checkout} · Booking fee: ${KNOX_OTHER_FEE_RATES[t.plan_tier] ?? 32}
                     </div>
                   )}
                   {expandedDetails[t.id + "-car"] && t.has_car && (
                     <div className="phase-line" style={{ marginTop: 4 }}>
-                      🚗 {t.car_company} · ${Number(t.car_price || 0).toFixed(2)} · Conf# {t.car_confirmation || "—"} · {t.car_pickup_date} → {t.car_dropoff_date}
+                      🚗 {t.car_company} · ${Number(t.car_price || 0).toFixed(2)} · Conf# {t.car_confirmation || "—"} · {t.car_pickup_date} → {t.car_dropoff_date} · Booking fee: ${KNOX_OTHER_FEE_RATES[t.plan_tier] ?? 32}
                     </div>
                   )}
+                  {(expandedDetails[t.id + "-flight"] || expandedDetails[t.id + "-hotel"] || expandedDetails[t.id + "-car"]) && (() => {
+                    const flightCost = Number(t.ticket_price) || 0;
+                    const hotelCost = t.has_hotel ? (Number(t.hotel_price) || 0) : 0;
+                    const carCost = t.has_car ? (Number(t.car_price) || 0) : 0;
+                    const flightFee = flightCost > 0 ? (KNOX_FLIGHT_FEE_RATES[t.plan_tier] ?? 32) : 0;
+                    const hotelFee = t.has_hotel ? (KNOX_OTHER_FEE_RATES[t.plan_tier] ?? 32) : 0;
+                    const carFee = t.has_car ? (KNOX_OTHER_FEE_RATES[t.plan_tier] ?? 32) : 0;
+                    const totalCost = flightCost + hotelCost + carCost;
+                    const totalFees = flightFee + hotelFee + carFee;
+                    return (
+                      <div className="phase-line" style={{ marginTop: 6, paddingTop: 6, borderTop: "1px dashed var(--line)" }}>
+                        💰 Trip total — travel cost: ${totalCost.toFixed(2)} + OneStone fees: ${totalFees.toFixed(2)} = <b>${(totalCost + totalFees).toFixed(2)}</b>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div className="track">
                   <div className="bar" style={{ left: `${left}%`, width: `${width}%`, background: meta.color }} />
@@ -1013,7 +1039,7 @@ function KnoxShell({ session }) {
       <div className="knoxbar">
         <div className="knoxbar-inner">
           <div>
-            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v2.1</span></div>
+            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v2.2</span></div>
             <div className="knox-sub">OneStone Staff System</div>
           </div>
           <div className="knox-user">
