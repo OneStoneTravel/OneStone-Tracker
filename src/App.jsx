@@ -37,11 +37,12 @@ const KNOX_FLIGHT_FEE_RATES = { Starter: 40, Growth: 35, Premier: 30, Anchor: 32
 // so a client note flags that it still needs to be entered.
 async function logBookingFeeToEhlo(trip, session) {
   const fee = KNOX_FLIGHT_FEE_RATES[trip.plan_tier] ?? 32;
+  const ticketPrice = Number(trip.ticket_price) || 0;
   await supabase.from("client_expenses").insert({
     client_id: trip.client_id,
     traveler_name: trip.client_name,
     category: "Flight",
-    amount: 0,
+    amount: ticketPrice,
     fee,
     entry_date: trip.travel_date,
     created_by: session.user.email,
@@ -49,7 +50,7 @@ async function logBookingFeeToEhlo(trip, session) {
   });
   await supabase.from("client_notes").insert({
     client_id: trip.client_id,
-    note: `Trip booked in Knox Tracker: ${trip.client_name}, ${trip.airline} ${trip.flight_number} on ${trip.travel_date}. Booking fee ($${fee}) logged automatically — still need to enter the actual ticket cost in Billing.`,
+    note: `Trip booked in Knox Tracker: ${trip.client_name}, ${trip.airline} ${trip.flight_number} on ${trip.travel_date}. Ticket cost ($${ticketPrice.toFixed(2)}) and booking fee ($${fee}) both logged automatically.`,
     created_by: session.user.email,
   });
 }
@@ -174,6 +175,7 @@ function emptyForm() {
     departure_time: "09:00",
     duration_hours: 2.5,
     booking_status: "pending",
+    ticket_price: "",
   };
 }
 
@@ -336,6 +338,12 @@ function TripForm({ date, onAdd, clients, travelers }) {
             <option value="booked">Booked &amp; Confirmed</option>
           </select>
         </div>
+        {form.booking_status === "booked" && (
+          <div>
+            <label>Ticket price ($)</label>
+            <input required type="number" step="0.01" min="0" value={form.ticket_price} onChange={set("ticket_price")} placeholder="482.50" />
+          </div>
+        )}
         <div><button type="submit">Add trip</button></div>
       </form>
     </div>
@@ -475,6 +483,7 @@ function Tracker({ session }) {
       duration_hours: parseFloat(form.duration_hours) || 2,
       status: "ontime",
       booking_status: form.booking_status,
+      ticket_price: form.booking_status === "booked" ? (parseFloat(form.ticket_price) || 0) : null,
       entered_by: session.user.email,
     }).select().single();
 
@@ -540,10 +549,13 @@ function Tracker({ session }) {
       departure_time: t.departure_time?.slice(0, 5) || "09:00",
       duration_hours: t.duration_hours || 2.5,
       booking_status: t.booking_status || "pending",
+      ticket_price: t.ticket_price ?? "",
     });
   }
 
   async function saveEditTrip() {
+    const newTicketPrice = editTripForm.booking_status === "booked" ? (parseFloat(editTripForm.ticket_price) || 0) : editingTrip.ticket_price;
+
     await supabase.from("trips").update({
       client_name: editTripForm.client_name,
       airline: editTripForm.airline,
@@ -553,12 +565,16 @@ function Tracker({ session }) {
       departure_time: editTripForm.departure_time,
       duration_hours: parseFloat(editTripForm.duration_hours) || 2,
       booking_status: editTripForm.booking_status,
+      ticket_price: newTicketPrice,
     }).eq("id", editingTrip.id);
 
     const justBooked = editingTrip.booking_status !== "booked" && editTripForm.booking_status === "booked";
     if (justBooked && editingTrip.client_id && !editingTrip.fee_logged_to_ehlo) {
-      await logBookingFeeToEhlo({ ...editingTrip, ...editTripForm }, session);
+      await logBookingFeeToEhlo({ ...editingTrip, ...editTripForm, ticket_price: newTicketPrice }, session);
       await supabase.from("trips").update({ fee_logged_to_ehlo: true }).eq("id", editingTrip.id);
+    } else if (editingTrip.fee_logged_to_ehlo && Number(newTicketPrice) !== Number(editingTrip.ticket_price)) {
+      // Price was corrected after the fee was already logged — keep the Ehlo entry in sync
+      await supabase.from("client_expenses").update({ amount: Number(newTicketPrice) || 0 }).eq("source_trip_id", editingTrip.id);
     }
 
     setEditingTrip(null);
@@ -748,6 +764,13 @@ function Tracker({ session }) {
               <option value="booked">Booked &amp; Confirmed</option>
             </select>
 
+            {editTripForm.booking_status === "booked" && (
+              <>
+                <label>Ticket price ($)</label>
+                <input type="number" step="0.01" min="0" value={editTripForm.ticket_price} onChange={(e) => setEditTripForm({ ...editTripForm, ticket_price: e.target.value })} placeholder="482.50" />
+              </>
+            )}
+
             <div className="modal-actions">
               <button className="ghost" onClick={() => setEditingTrip(null)}>Cancel</button>
               <button onClick={saveEditTrip}>Save</button>
@@ -767,7 +790,7 @@ function KnoxShell({ session }) {
       <div className="knoxbar">
         <div className="knoxbar-inner">
           <div>
-            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v1.9</span></div>
+            <div className="knox-logo">KN<span>O</span>X <span className="version-tag">v2.0</span></div>
             <div className="knox-sub">OneStone Staff System</div>
           </div>
           <div className="knox-user">
