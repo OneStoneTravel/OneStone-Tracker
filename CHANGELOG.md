@@ -1,5 +1,10 @@
 # Knox Tracker — Changelog
 
+## 2.2 — Jul 27, 2026
+**Added**
+- Flight now works the same way as Hotel and Car on the board — click it to see ticket price and booking fee.
+- Whenever any of Flight/Hotel/Car is expanded, a combined trip total now shows: total travel cost + total OneStone booking fees = grand total for that trip.
+
 ## 2.1 — Jul 27, 2026
 **Added — Hotel and rental car reservations**
 - Every trip can now capture a hotel (brand, price, confirmation #, check-in/check-out) and a rental car (company, price, confirmation #, pickup/dropoff dates) alongside the flight.
