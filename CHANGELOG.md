@@ -1,5 +1,18 @@
 # Knox Tracker — Changelog
 
+## 2.1 — Jul 27, 2026
+**Added — Hotel and rental car reservations**
+- Every trip can now capture a hotel (brand, price, confirmation #, check-in/check-out) and a rental car (company, price, confirmation #, pickup/dropoff dates) alongside the flight.
+- Loyalty numbers auto-fill from the traveler's profile in Ehlo — no retyping.
+- Today's Board now shows a green ✓ or red ✗ for Hotel and Car on every trip — click either one (when booked) to expand the full reservation details inline.
+- All three (flight, hotel, car) now flow to Ehlo's Billing automatically once a trip is marked "Booked & Confirmed," each with the correct booking fee for that client's plan.
+- Fixed a related edge case from the fee-linking system: deleting a trip with multiple linked Ehlo entries (flight + hotel + car) now handles all of them correctly instead of assuming there's only one.
+
+## 2.0 — Jul 27, 2026
+**Added**
+- Ticket price capture: marking a trip "Booked & Confirmed" now asks for the actual ticket price (right when staff have it in front of them from booking the flight). This completes the auto-billing loop — Ehlo now receives the real ticket cost automatically, not a $0 placeholder someone had to fill in by hand later.
+- Editing a trip's ticket price after the fee was already logged keeps Ehlo's billing entry in sync automatically.
+
 ## 1.9 — Jul 27, 2026
 **Fixed**
 - Orphaned billing entries: deleting a trip that already had its booking fee auto-logged to Ehlo used to leave that fee sitting there with nothing cleaning it up. Now, deleting a trip checks the linked Ehlo entry first — if it's still untouched ($0, nobody's added the real ticket cost yet), it gets removed along with the trip. If someone already entered a real number, it's never silently deleted — instead a client note flags it for manual review.
