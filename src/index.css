@@ -31,6 +31,8 @@ h1,h2,h3{font-family:'Fraunces',Georgia,serif;}
   transition:all .15s ease}
 .knox-tab:hover{color:#fff}
 .knox-tab.active{color:#fff;border-bottom-color:var(--wine-light)}
+.tab-badge{display:inline-block;margin-left:6px;background:var(--wine-light);color:#16233F;font-size:10.5px;
+  font-weight:700;padding:1px 6px;border-radius:999px;vertical-align:middle}
 
 .wrap{max-width:1200px;margin:0 auto;padding:26px 20px 60px}
 

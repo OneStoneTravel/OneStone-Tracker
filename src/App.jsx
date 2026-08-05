@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import DisruptionTool from "./DisruptionTool";
 import TripNotes from "./TripNotes";
+import Requests from "./Requests";
 
 const DAY_START = 0;
 const DAY_END = 24;
@@ -1033,6 +1034,14 @@ function Tracker({ session }) {
 
 function KnoxShell({ session }) {
   const [tab, setTab] = useState("tracker");
+  const [requestCount, setRequestCount] = useState(0);
+
+  async function loadRequestCount() {
+    const { count } = await supabase.from("requests").select("id", { count: "exact", head: true }).eq("status", "New");
+    setRequestCount(count || 0);
+  }
+
+  useEffect(() => { loadRequestCount(); }, [tab]);
 
   return (
     <div>
@@ -1051,6 +1060,10 @@ function KnoxShell({ session }) {
           <button className={`knox-tab ${tab === "tracker" ? "active" : ""}`} onClick={() => setTab("tracker")}>
             Daily Client Tracker
           </button>
+          <button className={`knox-tab ${tab === "requests" ? "active" : ""}`} onClick={() => setTab("requests")}>
+            Travel Requests
+            {requestCount > 0 && <span className="tab-badge">{requestCount}</span>}
+          </button>
           <button className={`knox-tab ${tab === "disruption" ? "active" : ""}`} onClick={() => setTab("disruption")}>
             Disruption Tool
           </button>
@@ -1058,7 +1071,9 @@ function KnoxShell({ session }) {
       </div>
 
       <div className="wrap">
-        {tab === "tracker" ? <Tracker session={session} /> : <DisruptionTool />}
+        {tab === "tracker" && <Tracker session={session} />}
+        {tab === "requests" && <Requests session={session} />}
+        {tab === "disruption" && <DisruptionTool />}
       </div>
     </div>
   );
